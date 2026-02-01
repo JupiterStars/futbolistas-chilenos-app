@@ -1278,6 +1278,9 @@ async function createContext(opts) {
 var app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Vercel API is alive" });
+});
 registerOAuthRoutes(app);
 app.use(
   "/api/trpc",

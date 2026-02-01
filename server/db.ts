@@ -1,7 +1,8 @@
 import { eq, desc, asc, and, like, or, sql, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  InsertUser, users, 
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
+  InsertUser, users,
   news, InsertNews, News,
   newsCategories, InsertNewsCategory, NewsCategory,
   players, InsertPlayer, Player,
@@ -19,14 +20,17 @@ import {
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _client: postgres.Sql | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _client = postgres(process.env.DATABASE_URL);
+      _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _client = null;
     }
   }
   return _db;
@@ -45,6 +49,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
+    const existingUser = await db.select().from(users).where(eq(users.openId, user.openId)).limit(1);
+
     const values: InsertUser = {
       openId: user.openId,
     };
@@ -83,9 +89,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    if (existingUser.length > 0) {
+      // Update existing user
+      await db.update(users).set(updateSet).where(eq(users.openId, user.openId));
+    } else {
+      // Insert new user
+      await db.insert(users).values(values);
+    }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -133,16 +143,16 @@ export async function createCategory(data: InsertNewsCategory) {
 }
 
 // ============ NEWS FUNCTIONS ============
-export async function getNewsList(options: { 
-  categoryId?: number; 
-  limit?: number; 
+export async function getNewsList(options: {
+  categoryId?: number;
+  limit?: number;
   offset?: number;
   featured?: boolean;
   premium?: boolean;
 }) {
   const db = await getDb();
   if (!db) return [];
-  
+
   let query = db.select({
     news: news,
     category: newsCategories,
@@ -218,8 +228,8 @@ export async function getNewsBySlug(slug: string) {
 export async function createNews(data: InsertNews) {
   const db = await getDb();
   if (!db) return;
-  const result = await db.insert(news).values(data);
-  return result[0].insertId;
+  const result = await db.insert(news).values(data).returning();
+  return result[0]?.id;
 }
 
 export async function incrementNewsViews(id: number) {
@@ -249,16 +259,16 @@ export async function createTeam(data: InsertTeam) {
 }
 
 // ============ PLAYER FUNCTIONS ============
-export async function getPlayersList(options: { 
-  position?: string; 
+export async function getPlayersList(options: {
+  position?: string;
   teamId?: number;
-  limit?: number; 
+  limit?: number;
   offset?: number;
   orderBy?: 'rating' | 'goals' | 'assists' | 'name';
 }) {
   const db = await getDb();
   if (!db) return [];
-  
+
   let query = db.select({
     player: players,
     team: teams,
@@ -372,7 +382,7 @@ export async function getTopRated(limit = 10) {
 export async function getTransfers(options: { status?: 'confirmed' | 'rumor' | 'official'; limit?: number; offset?: number }) {
   const db = await getDb();
   if (!db) return [];
-  
+
   let query = db.select().from(transfers)
     .orderBy(desc(transfers.createdAt))
     .$dynamic();
@@ -393,15 +403,15 @@ export async function getTransfers(options: { status?: 'confirmed' | 'rumor' | '
 export async function getTransferWithDetails(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  
+
   const result = await db.select().from(transfers).where(eq(transfers.id, id)).limit(1);
   if (!result[0]) return undefined;
-  
+
   const transfer = result[0];
   const player = transfer.playerId ? await getPlayerById(transfer.playerId) : undefined;
   const fromTeam = transfer.fromTeamId ? await getTeamById(transfer.fromTeamId) : undefined;
   const toTeam = transfer.toTeamId ? await getTeamById(transfer.toTeamId) : undefined;
-  
+
   return { transfer, player, fromTeam, toTeam };
 }
 
@@ -415,7 +425,7 @@ export async function createTransfer(data: InsertTransfer) {
 export async function getCommentsByNewsId(newsId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const result = await db.select({
     comment: comments,
     user: {
@@ -427,15 +437,15 @@ export async function getCommentsByNewsId(newsId: number) {
     .leftJoin(users, eq(comments.userId, users.id))
     .where(and(eq(comments.newsId, newsId), eq(comments.isDeleted, false)))
     .orderBy(desc(comments.createdAt));
-  
+
   return result;
 }
 
 export async function createComment(data: InsertComment) {
   const db = await getDb();
   if (!db) return;
-  const result = await db.insert(comments).values(data);
-  return result[0].insertId;
+  const result = await db.insert(comments).values(data).returning();
+  return result[0]?.id;
 }
 
 export async function deleteComment(id: number, userId: number) {
@@ -449,11 +459,11 @@ export async function deleteComment(id: number, userId: number) {
 export async function toggleCommentLike(commentId: number, userId: number) {
   const db = await getDb();
   if (!db) return false;
-  
+
   const existing = await db.select().from(commentLikes)
     .where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)))
     .limit(1);
-  
+
   if (existing.length > 0) {
     await db.delete(commentLikes).where(eq(commentLikes.id, existing[0].id));
     await db.update(comments).set({ likes: sql`${comments.likes} - 1` }).where(eq(comments.id, commentId));
@@ -468,11 +478,11 @@ export async function toggleCommentLike(commentId: number, userId: number) {
 export async function getUserCommentLikes(userId: number, commentIds: number[]) {
   const db = await getDb();
   if (!db || commentIds.length === 0) return [];
-  
+
   const result = await db.select({ commentId: commentLikes.commentId })
     .from(commentLikes)
     .where(and(eq(commentLikes.userId, userId), inArray(commentLikes.commentId, commentIds)));
-  
+
   return result.map(r => r.commentId);
 }
 
@@ -480,7 +490,7 @@ export async function getUserCommentLikes(userId: number, commentIds: number[]) 
 export async function getUserFavoriteNews(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select({
     favorite: favoriteNews,
     news: news,
@@ -495,11 +505,11 @@ export async function getUserFavoriteNews(userId: number) {
 export async function toggleFavoriteNews(userId: number, newsId: number) {
   const db = await getDb();
   if (!db) return false;
-  
+
   const existing = await db.select().from(favoriteNews)
     .where(and(eq(favoriteNews.userId, userId), eq(favoriteNews.newsId, newsId)))
     .limit(1);
-  
+
   if (existing.length > 0) {
     await db.delete(favoriteNews).where(eq(favoriteNews.id, existing[0].id));
     return false;
@@ -512,18 +522,18 @@ export async function toggleFavoriteNews(userId: number, newsId: number) {
 export async function isNewsFavorited(userId: number, newsId: number) {
   const db = await getDb();
   if (!db) return false;
-  
+
   const result = await db.select().from(favoriteNews)
     .where(and(eq(favoriteNews.userId, userId), eq(favoriteNews.newsId, newsId)))
     .limit(1);
-  
+
   return result.length > 0;
 }
 
 export async function getUserFavoritePlayers(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select({
     favorite: favoritePlayers,
     player: players,
@@ -538,11 +548,11 @@ export async function getUserFavoritePlayers(userId: number) {
 export async function toggleFavoritePlayer(userId: number, playerId: number) {
   const db = await getDb();
   if (!db) return false;
-  
+
   const existing = await db.select().from(favoritePlayers)
     .where(and(eq(favoritePlayers.userId, userId), eq(favoritePlayers.playerId, playerId)))
     .limit(1);
-  
+
   if (existing.length > 0) {
     await db.delete(favoritePlayers).where(eq(favoritePlayers.id, existing[0].id));
     return false;
@@ -555,11 +565,11 @@ export async function toggleFavoritePlayer(userId: number, playerId: number) {
 export async function isPlayerFavorited(userId: number, playerId: number) {
   const db = await getDb();
   if (!db) return false;
-  
+
   const result = await db.select().from(favoritePlayers)
     .where(and(eq(favoritePlayers.userId, userId), eq(favoritePlayers.playerId, playerId)))
     .limit(1);
-  
+
   return result.length > 0;
 }
 
@@ -573,7 +583,7 @@ export async function addToReadingHistory(userId: number, newsId: number) {
 export async function getUserReadingHistory(userId: number, limit = 20) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select({
     history: readingHistory,
     news: news,
@@ -590,7 +600,7 @@ export async function getUserReadingHistory(userId: number, limit = 20) {
 export async function getUserNotifications(userId: number, limit = 20) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select().from(notifications)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt))
@@ -622,11 +632,11 @@ export async function markAllNotificationsAsRead(userId: number) {
 export async function getUnreadNotificationCount(userId: number) {
   const db = await getDb();
   if (!db) return 0;
-  
+
   const result = await db.select({ count: sql<number>`count(*)` })
     .from(notifications)
     .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
-  
+
   return result[0]?.count ?? 0;
 }
 
@@ -634,9 +644,9 @@ export async function getUnreadNotificationCount(userId: number) {
 export async function searchAll(query: string, limit = 10) {
   const db = await getDb();
   if (!db) return { news: [], players: [], teams: [] };
-  
+
   const searchTerm = `%${query}%`;
-  
+
   const newsResults = await db.select({
     news: news,
     category: newsCategories,
@@ -648,7 +658,7 @@ export async function searchAll(query: string, limit = 10) {
     ))
     .orderBy(desc(news.publishedAt))
     .limit(limit);
-  
+
   const playerResults = await db.select({
     player: players,
     team: teams,
@@ -657,14 +667,14 @@ export async function searchAll(query: string, limit = 10) {
     .where(like(players.name, searchTerm))
     .orderBy(desc(players.overallRating))
     .limit(limit);
-  
+
   const teamResults = await db.select().from(teams)
     .where(or(
       like(teams.name, searchTerm),
       like(teams.shortName, searchTerm)
     ))
     .limit(limit);
-  
+
   return { news: newsResults, players: playerResults, teams: teamResults };
 }
 
@@ -672,7 +682,7 @@ export async function searchAll(query: string, limit = 10) {
 export async function getPlayerNews(playerId: number, limit = 10) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select({
     news: news,
     category: newsCategories,

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 import {
   Clock,
   Eye,
@@ -381,9 +382,9 @@ export default function NewsDetail() {
               {news.excerpt}
             </p>
           )}
-          <div 
+          <div
             className="whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: news.content.replace(/\n/g, '<br/>') }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content.replace(/\n/g, '<br/>')) }}
           />
         </motion.div>
 

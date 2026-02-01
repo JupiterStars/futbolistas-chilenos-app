@@ -10,6 +10,11 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Health check (diagnose 500)
+app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", message: "Vercel API is alive" });
+});
+
 // OAuth callback under /api/oauth/callback
 registerOAuthRoutes(app);
 

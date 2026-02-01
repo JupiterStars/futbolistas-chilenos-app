@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Development files
+.vscode
+.idea
+*.log
+*.swp
+*.swo
+
+# =============================================================================
+# NOTE: dist/ is INCLUDED for Vercel deploy
+# - dist/index.js (bundled backend for api/index.js)
+# - dist/public/ (frontend assets)
+# =============================================================================
+
+# Testing
+coverage
+.nyc_output
+
+# Environment files (use Vercel env vars)
+.env
+.env.local
+.env.*.local
+
+# Debug logs
+.manus-logs
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# Database (local only)
+*.db
+*.sqlite
+
+# Drizzle
+drizzle/*.sql
+!drizzle/schema.ts
+
+# Patches
+patches

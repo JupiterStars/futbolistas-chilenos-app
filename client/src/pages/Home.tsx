@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -6,22 +6,54 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft,
   ChevronRight,
   Clock,
   Eye,
   TrendingUp,
-  Trophy,
-  Users,
+  Flame,
   ArrowRight,
+  Heart,
 } from "lucide-react";
+
+// Category colors mapping - Improved to match reference images
+const categoryColors: Record<string, string> = {
+  "la-roja": "bg-[#E30613]",           // Rojo Chile
+  "extranjero": "bg-[#FFA500]",        // Naranja/Amber brillante
+  "u20": "bg-[#E30613]",               // Rojo Chile
+  "u18": "bg-[#8B5CF6]",               // Púrpura
+  "u17": "bg-[#3B82F6]",               // Azul
+  "u16": "bg-[#EC4899]",               // Rosa/Fucsia
+  "u15": "bg-[#6366F1]",               // Índigo
+  "entrevistas": "bg-[#14B8A6]",       // Teal
+  "mercado": "bg-[#F97316]",           // Naranja fuerte
+};
+
+const categoryNames: Record<string, string> = {
+  "la-roja": "LA ROJA",
+  "extranjero": "EXTRANJERO",
+  "u20": "U20",
+  "u18": "U18",
+  "u17": "U17",
+  "u16": "U16",
+  "u15": "U15",
+  "entrevistas": "ENTREVISTAS",
+  "mercado": "MERCADO",
+};
 
 // Hero Carousel Component
 function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { data: featuredNews, isLoading } = trpc.news.featured.useQuery({ limit: 5 });
+
+  useEffect(() => {
+    if (!featuredNews?.length) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredNews.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [featuredNews]);
 
   const nextSlide = () => {
     if (featuredNews) {
@@ -37,7 +69,7 @@ function HeroCarousel() {
 
   if (isLoading) {
     return (
-      <div className="relative h-[500px] md:h-[600px] bg-muted rounded-2xl overflow-hidden">
+      <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden">
         <Skeleton className="w-full h-full" />
       </div>
     );
@@ -45,21 +77,21 @@ function HeroCarousel() {
 
   if (!featuredNews || featuredNews.length === 0) {
     return (
-      <div className="relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden">
+      <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/stadium-bg.jpg')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         </div>
-        <div className="absolute inset-0 flex items-end p-8 md:p-12">
+        <div className="absolute inset-0 flex items-end p-6 md:p-10">
           <div className="max-w-2xl">
-            <Badge className="mb-4 bg-primary">Bienvenido</Badge>
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-              Chilenos Young
+            <Badge className="mb-3 bg-[#E30613] hover:bg-[#E30613]">Bienvenido</Badge>
+            <h1 className="font-heading text-3xl md:text-5xl font-bold text-white mb-3">
+              FCH Noticias
             </h1>
-            <p className="text-lg text-white/80 mb-6">
-              La plataforma definitiva para seguir a las jóvenes promesas del fútbol chileno
+            <p className="text-base md:text-lg text-white/80">
+              Tu fuente de noticias del fútbol chileno
             </p>
           </div>
         </div>
@@ -68,9 +100,12 @@ function HeroCarousel() {
   }
 
   const currentNews = featuredNews[currentSlide];
+  const categorySlug = currentNews.category?.slug || "";
+  const categoryColor = categoryColors[categorySlug] || "bg-[#E30613]";
+  const categoryName = currentNews.category?.name || categoryNames[categorySlug] || "NOTICIAS";
 
   return (
-    <div className="relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden group">
+    <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden group">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentSlide}
@@ -86,19 +121,19 @@ function HeroCarousel() {
               backgroundImage: `url(${currentNews.news.imageUrl || '/stadium-bg.jpg'})` 
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
           </div>
-          <div className="absolute inset-0 flex items-end p-8 md:p-12">
+          <div className="absolute inset-0 flex items-end p-6 md:p-10">
             <div className="max-w-2xl">
-              {currentNews.category && (
-                <Badge className="mb-4 bg-primary">{currentNews.category.name}</Badge>
-              )}
+              <Badge className={`mb-3 ${categoryColor} hover:${categoryColor} text-white border-0 font-medium text-xs`}>
+                {categoryName}
+              </Badge>
               <Link href={`/news/${currentNews.news.slug}`}>
                 <motion.h1 
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-3xl md:text-5xl font-bold text-white mb-4 hover:text-primary transition-colors cursor-pointer"
+                  className="font-heading text-2xl md:text-4xl font-bold text-white mb-3 hover:text-white/90 transition-colors cursor-pointer leading-tight"
                 >
                   {currentNews.news.title}
                 </motion.h1>
@@ -107,7 +142,7 @@ function HeroCarousel() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-lg text-white/80 mb-6 line-clamp-2"
+                className="text-base text-white/80 mb-4 line-clamp-2"
               >
                 {currentNews.news.excerpt}
               </motion.p>
@@ -119,11 +154,14 @@ function HeroCarousel() {
               >
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {new Date(currentNews.news.publishedAt).toLocaleDateString('es-CL')}
+                  {new Date(currentNews.news.publishedAt).toLocaleDateString('es-CL', {
+                    day: 'numeric',
+                    month: 'long'
+                  })}
                 </span>
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
-                  {currentNews.news.views} vistas
+                  {currentNews.news.views.toLocaleString()} vistas
                 </span>
               </motion.div>
             </div>
@@ -134,15 +172,15 @@ function HeroCarousel() {
       {/* Navigation arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60 backdrop-blur-sm"
       >
-        <ChevronLeft className="w-6 h-6" />
+        <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60 backdrop-blur-sm"
       >
-        <ChevronRight className="w-6 h-6" />
+        <ChevronRight className="w-5 h-5" />
       </button>
 
       {/* Dots */}
@@ -151,10 +189,10 @@ function HeroCarousel() {
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`w-2 h-2 rounded-full transition-all ${
+            className={`h-1.5 rounded-full transition-all ${
               index === currentSlide 
-                ? "w-8 bg-primary" 
-                : "bg-white/50 hover:bg-white/70"
+                ? "w-6 bg-white" 
+                : "w-1.5 bg-white/40 hover:bg-white/60"
             }`}
           />
         ))}
@@ -163,306 +201,291 @@ function HeroCarousel() {
   );
 }
 
-// News Card Component
-function NewsCard({ news, category, featured = false }: { 
-  news: any; 
-  category: any; 
-  featured?: boolean;
-}) {
+// Trending Bar Component
+function TrendingBar() {
+  const { data: trendingNews, isLoading } = trpc.news.list.useQuery({ limit: 5 });
+
+  if (isLoading || !trendingNews?.length) return null;
+
   return (
-    <Link href={`/news/${news.slug}`}>
-      <motion.article
-        whileHover={{ y: -5 }}
-        className={`group bg-card rounded-xl overflow-hidden border border-border card-hover ${
-          featured ? "md:col-span-2 md:row-span-2" : ""
-        }`}
-      >
-        <div className={`relative overflow-hidden ${featured ? "h-64 md:h-80" : "h-48"}`}>
-          <img
-            src={news.imageUrl || "/chile-team-1.jpg"}
-            alt={news.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          {category && (
-            <Badge className="absolute top-4 left-4 bg-primary">
-              {category.name}
-            </Badge>
-          )}
-          {news.isPremium && (
-            <Badge className="absolute top-4 right-4 bg-gold text-black">
-              Premium
-            </Badge>
-          )}
+    <div className="flex items-center gap-3 py-3 overflow-hidden border-b border-gray-200 dark:border-white/5">
+      <Badge className="bg-[#E30613] hover:bg-[#E30613] text-white border-0 shrink-0 font-heading font-bold tracking-wide text-[10px]">
+        TENDENCIAS
+      </Badge>
+      <div className="flex-1 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-6">
+          {trendingNews.map((item, index) => (
+            <Link 
+              key={`${item.news.id}-${index}`} 
+              href={`/news/${item.news.slug}`}
+              className="flex items-center gap-2 shrink-0 hover:text-[#E30613] transition-colors group"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E30613] shrink-0 group-hover:scale-125 transition-transform" />
+              <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[200px] md:max-w-[300px] whitespace-nowrap">
+                {item.news.title}
+              </span>
+            </Link>
+          ))}
         </div>
-        <div className="p-4">
-          <h3 className={`font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2 ${
-            featured ? "text-xl md:text-2xl" : "text-lg"
-          }`}>
-            {news.title}
-          </h3>
-          {featured && news.excerpt && (
-            <p className="text-muted-foreground mb-3 line-clamp-2">
-              {news.excerpt}
-            </p>
-          )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {new Date(news.publishedAt).toLocaleDateString('es-CL')}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              {news.views}
-            </span>
-          </div>
-        </div>
-      </motion.article>
-    </Link>
+      </div>
+    </div>
   );
 }
 
-// News Grid Component
+// News Card Component
+function NewsCard({ news, category, index = 0 }: { 
+  news: any; 
+  category: any;
+  index?: number;
+}) {
+  const categorySlug = category?.slug || "";
+  const categoryColor = categoryColors[categorySlug] || "bg-[#E30613]";
+  const categoryName = category?.name || categoryNames[categorySlug] || "NOTICIAS";
+
+  // Format relative time
+  const getRelativeTime = (date: string) => {
+    const now = new Date();
+    const published = new Date(date);
+    const diffInHours = Math.floor((now.getTime() - published.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "Hace minutos";
+    if (diffInHours < 24) return `Hace ${diffInHours}h`;
+    if (diffInHours < 48) return "Ayer";
+    return published.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Link href={`/news/${news.slug}`}>
+        <article className="group bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5 hover:border-[#E30613]/30 dark:hover:border-[#E30613]/30 transition-all duration-300 hover:shadow-lg hover:shadow-[#E30613]/5">
+          {/* Image Container */}
+          <div className="relative h-44 overflow-hidden bg-gray-100 dark:bg-white/5">
+            <img
+              src={news.imageUrl || "/chile-team-1.jpg"}
+              alt={news.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+            {/* Category Badge */}
+            <Badge className={`absolute top-3 left-3 ${categoryColor} text-white border-0 text-[10px] font-bold tracking-wider px-2 py-0.5`}>
+              {categoryName}
+            </Badge>
+            {/* Views Badge */}
+            <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full">
+              <TrendingUp className="w-3 h-3" />
+              {news.views.toLocaleString()}
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="p-4">
+            <h3 className="font-heading font-bold text-base leading-snug mb-2 group-hover:text-[#E30613] transition-colors line-clamp-2">
+              {news.title}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
+              {news.excerpt}
+            </p>
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {getRelativeTime(news.publishedAt)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                {news.views.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </article>
+      </Link>
+    </motion.div>
+  );
+}
+
+// Category Filter Tabs
+function CategoryTabs({ 
+  activeCategory, 
+  setActiveCategory, 
+  categories 
+}: { 
+  activeCategory: string; 
+  setActiveCategory: (id: string) => void;
+  categories: any[];
+}) {
+  const allTabs = [
+    { id: "all", name: "Todas", icon: Flame },
+    ...(categories?.slice(0, 4).map(cat => ({ 
+      id: cat.id.toString(), 
+      name: cat.name,
+      icon: null 
+    })) || []),
+  ];
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      {allTabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeCategory === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveCategory(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              isActive
+                ? "bg-[#E30613] text-white shadow-lg shadow-[#E30613]/20"
+                : "bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10"
+            }`}
+          >
+            {Icon && <Icon className="w-4 h-4" />}
+            {tab.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// News Grid Section
 function NewsGrid() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const { data: categories } = trpc.categories.list.useQuery();
   const { data: newsList, isLoading } = trpc.news.list.useQuery({
     categoryId: activeCategory !== "all" ? parseInt(activeCategory) : undefined,
-    limit: 9,
+    limit: 8,
   });
 
   return (
-    <section className="py-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold">Últimas Noticias</h2>
-          <p className="text-muted-foreground">
-            Mantente al día con las novedades del fútbol chileno
-          </p>
+    <section className="py-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-6 bg-[#E30613] rounded-full" />
+          <h2 className="font-heading text-xl md:text-2xl font-bold">Últimas Noticias</h2>
         </div>
-        <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-          <TabsList className="bg-muted">
-            <TabsTrigger value="all">Todas</TabsTrigger>
-            {categories?.slice(0, 4).map((cat) => (
-              <TabsTrigger key={cat.id} value={cat.id.toString()}>
-                {cat.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <Link href="/news">
+          <span className="text-sm text-gray-500 hover:text-[#E30613] transition-colors flex items-center gap-1">
+            Ver todas
+            <ChevronRight className="w-4 h-4" />
+          </span>
+        </Link>
       </div>
 
+      {/* Tabs */}
+      <div className="mb-6">
+        <CategoryTabs 
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          categories={categories || []}
+        />
+      </div>
+
+      {/* Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-card rounded-xl overflow-hidden border border-border">
-              <Skeleton className="h-48 w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5">
+              <Skeleton className="h-44 w-full" />
               <div className="p-4 space-y-3">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-1/2" />
               </div>
             </div>
           ))}
         </div>
       ) : newsList && newsList.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {newsList.map((item, index) => (
             <NewsCard 
               key={item.news.id} 
               news={item.news} 
               category={item.category}
-              featured={index === 0}
+              index={index}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No hay noticias disponibles</p>
+        <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-xl">
+          <p className="text-gray-500">No hay noticias disponibles</p>
         </div>
       )}
+    </section>
+  );
+}
 
-      <div className="text-center mt-8">
-        <Button variant="outline" size="lg" className="rounded-full">
-          Ver más noticias
-          <ArrowRight className="ml-2 w-4 h-4" />
+// Categories Grid Section
+function CategoriesGrid() {
+  const { data: categories } = trpc.categories.list.useQuery();
+
+  const categoryLinks = [
+    { slug: "la-roja", name: "LA ROJA" },
+    { slug: "extranjero", name: "Extranjero" },
+    { slug: "u20", name: "U20" },
+    { slug: "u18", name: "U18" },
+    { slug: "u17", name: "U17" },
+    { slug: "u16", name: "U16" },
+    { slug: "u15", name: "U15" },
+    { slug: "entrevistas", name: "Entrevistas" },
+    { slug: "mercado", name: "Mercado de Pases" },
+  ];
+
+  return (
+    <section className="py-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1 h-6 bg-[#E30613] rounded-full" />
+        <h2 className="font-heading text-xl md:text-2xl font-bold">Explora por Categoría</h2>
+      </div>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {categoryLinks.map((cat, index) => (
+          <motion.div
+            key={cat.slug}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+          >
+            <Link href={`/category/${cat.slug}`}>
+              <div className="group bg-white dark:bg-[#111] border border-gray-200 dark:border-white/5 rounded-xl p-4 text-center hover:border-[#E30613]/30 dark:hover:border-[#E30613]/30 transition-all duration-300 hover:shadow-lg cursor-pointer">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-[#E30613] transition-colors">
+                  {cat.name}
+                </span>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Support Section - Matching reference home2.png
+function SupportSection() {
+  return (
+    <section className="py-6">
+      <div className="bg-[#E30613] rounded-2xl p-6 md:p-8 text-center">
+        {/* Heart icon centered at top */}
+        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
+          <Heart className="w-6 h-6 text-white" />
+        </div>
+        
+        <h3 className="font-heading text-xl md:text-2xl font-bold text-white mb-2">
+          Apoya Nuestro Trabajo
+        </h3>
+        <p className="text-white/80 text-sm md:text-base mb-6 max-w-md mx-auto">
+          Gracias a ti este proyecto se mantiene vivo
+        </p>
+        
+        {/* White button with red text */}
+        <Button 
+          className="bg-white text-[#E30613] hover:bg-white/90 rounded-full px-8 font-semibold shadow-lg w-full max-w-xs"
+        >
+          <Heart className="w-4 h-4 mr-2 fill-[#E30613]" />
+          Apoyar Ahora
         </Button>
       </div>
-    </section>
-  );
-}
-
-// Quick Stats Component
-function QuickStats() {
-  const { data: topScorers } = trpc.leaderboards.topScorers.useQuery({ limit: 3 });
-  const { data: topRated } = trpc.leaderboards.topRated.useQuery({ limit: 3 });
-
-  return (
-    <section className="py-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Top Scorers */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className="bg-card rounded-xl border border-border p-6"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Top Goleadores</h3>
-              <p className="text-sm text-muted-foreground">Temporada 2025</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            {topScorers?.slice(0, 3).map((item, index) => (
-              <Link key={item.player.id} href={`/players/${item.player.slug}`}>
-                <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                    index === 0 ? "bg-gold text-black" :
-                    index === 1 ? "bg-silver text-black" :
-                    "bg-bronze text-white"
-                  }`}>
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <p className="font-medium">{item.player.name}</p>
-                    <p className="text-sm text-muted-foreground">{item.team?.shortName || "Sin equipo"}</p>
-                  </div>
-                  <span className="text-2xl font-bold text-primary">{item.player.goals}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <Link href="/leaderboards">
-            <Button variant="ghost" className="w-full mt-4">
-              Ver ranking completo
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Top Rated */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className="bg-card rounded-xl border border-border p-6"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-secondary" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Mejor Valorados</h3>
-              <p className="text-sm text-muted-foreground">Rating general</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            {topRated?.slice(0, 3).map((item, index) => (
-              <Link key={item.player.id} href={`/players/${item.player.slug}`}>
-                <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                    index === 0 ? "bg-gold text-black" :
-                    index === 1 ? "bg-silver text-black" :
-                    "bg-bronze text-white"
-                  }`}>
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <p className="font-medium">{item.player.name}</p>
-                    <p className="text-sm text-muted-foreground">{item.player.position}</p>
-                  </div>
-                  <span className="text-2xl font-bold text-secondary">
-                    {Number(item.player.overallRating).toFixed(1)}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <Link href="/leaderboards">
-            <Button variant="ghost" className="w-full mt-4">
-              Ver ranking completo
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </Link>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// Featured Players Component
-function FeaturedPlayers() {
-  const { data: players, isLoading } = trpc.players.list.useQuery({ 
-    limit: 4, 
-    orderBy: "rating" 
-  });
-
-  return (
-    <section className="py-12">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold">Jugadores Destacados</h2>
-          <p className="text-muted-foreground">Las jóvenes promesas del fútbol chileno</p>
-        </div>
-        <Link href="/players">
-          <Button variant="outline" className="rounded-full">
-            Ver todos
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
-        </Link>
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-72 rounded-xl" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {players?.map((item) => (
-            <Link key={item.player.id} href={`/players/${item.player.slug}`}>
-              <motion.div
-                whileHover={{ y: -10 }}
-                className="group relative bg-card rounded-xl overflow-hidden border border-border card-hover"
-              >
-                <div className="aspect-[3/4] relative">
-                  <img
-                    src={item.player.imageUrl || "/player-profile.jpg"}
-                    alt={item.player.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {item.player.position}
-                      </Badge>
-                      <span className="text-xs text-white/70">
-                        {item.player.age} años
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-white text-lg">
-                      {item.player.name}
-                    </h3>
-                    <p className="text-sm text-white/70">
-                      {item.team?.name || "Sin equipo"}
-                    </p>
-                  </div>
-                  <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                    <span className="font-bold text-primary-foreground">
-                      {Number(item.player.overallRating).toFixed(0)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
@@ -470,11 +493,12 @@ function FeaturedPlayers() {
 export default function Home() {
   return (
     <Layout>
-      <div className="container py-8">
+      <div className="container">
         <HeroCarousel />
+        <TrendingBar />
         <NewsGrid />
-        <QuickStats />
-        <FeaturedPlayers />
+        <CategoriesGrid />
+        <SupportSection />
       </div>
     </Layout>
   );

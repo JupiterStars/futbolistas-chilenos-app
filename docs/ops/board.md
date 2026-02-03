@@ -52,6 +52,16 @@
 5. Actualizar Drizzle ORM para usar PostgreSQL
 6. Pruebas de integración con Supabase
 
+## RECENTLY COMPLETED
+
+- [x] **Deploy completo a Vercel con fixes**
+  - Migración MySQL→PostgreSQL adaptada
+  - Fix: vercel.json rewrites correctos
+  - Fix: OAuth env vars robusto
+  - Fix: serverless export compatible
+  - Sitio online: https://chilenos-young.vercel.app
+  - Documentado lecciones en `docs/ops/DEPLOY_LESSONS.md`
+
 ---
 
 **Last Updated:** 2026-02-01

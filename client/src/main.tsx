@@ -6,7 +6,11 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { registerServiceWorker } from "./hooks/usePWA";
 import "./index.css";
+
+// Register PWA Service Worker
+registerServiceWorker();
 
 const queryClient = new QueryClient();
 

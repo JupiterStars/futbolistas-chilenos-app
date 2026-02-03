@@ -6,36 +6,43 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Search,
   Menu,
   Sun,
   Moon,
   User,
   Heart,
   LogOut,
-  Bell,
+  Search,
+  Home,
+  Newspaper,
   Trophy,
   Users,
   ArrowRightLeft,
-  Newspaper,
+  X,
+  ChevronRight,
+  HeartHandshake,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
+const categoryLinks = [
+  { href: "/", label: "Inicio", icon: Home },
+  { href: "/category/la-roja", label: "LA ROJA", icon: Newspaper },
+  { href: "/category/extranjero", label: "Extranjero", icon: Newspaper },
+  { href: "/category/u20", label: "U20", icon: Newspaper },
+  { href: "/category/u18", label: "U18", icon: Newspaper },
+  { href: "/category/u17", label: "U17", icon: Newspaper },
+  { href: "/category/u16", label: "U16", icon: Newspaper },
+  { href: "/category/u15", label: "U15", icon: Newspaper },
+  { href: "/category/entrevistas", label: "Entrevistas", icon: Newspaper },
+  { href: "/category/mercado", label: "Mercado de Pases", icon: ArrowRightLeft },
+];
+
 const navLinks = [
-  { href: "/", label: "Inicio", icon: Newspaper },
+  { href: "/", label: "Inicio", icon: Home },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/leaderboards", label: "Rankings", icon: Trophy },
   { href: "/transfers", label: "Fichajes", icon: ArrowRightLeft },
@@ -46,168 +53,78 @@ export default function Navbar() {
   const { user, isAuthenticated, logout, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: unreadCount } = trpc.notifications.unreadCount.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: trendingNews } = trpc.news.list.useQuery({ limit: 5 });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+    }
+  };
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl"
-    >
-      <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ rotate: 360 }}
-            transition={{ duration: 0.5 }}
-            className="w-10 h-10 rounded-full gradient-chile flex items-center justify-center"
-          >
-            <img src="/soccer-ball.png" alt="Logo" className="w-6 h-6 invert" />
-          </motion.div>
-          <span className="font-bold text-xl hidden sm:block">
-            <span className="text-primary">Chilenos</span>
-            <span className="text-secondary"> Young</span>
-          </span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => {
-            const isActive = location === link.href || 
-              (link.href !== "/" && location.startsWith(link.href));
-            return (
-              <Link key={link.href} href={link.href}>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {link.label}
-                </motion.div>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <Link href="/search">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Search className="h-5 w-5" />
-            </Button>
-          </Link>
-
-          {/* Theme toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={toggleTheme}
-          >
-            <AnimatePresence mode="wait">
-              {theme === "dark" ? (
-                <motion.div
-                  key="sun"
-                  initial={{ rotate: -90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 90, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Sun className="h-5 w-5" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="moon"
-                  initial={{ rotate: 90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: -90, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Moon className="h-5 w-5" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Button>
-
-          {/* Notifications (authenticated only) */}
-          {isAuthenticated && (
-            <Button variant="ghost" size="icon" className="rounded-full relative">
-              <Bell className="h-5 w-5" />
-              {unreadCount && unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Button>
-          )}
-
-          {/* User menu */}
-          {loading ? (
-            <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
-          ) : isAuthenticated && user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.avatar || undefined} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.name?.charAt(0) || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <Link href="/profile">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    Mi Perfil
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/favorites">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Heart className="mr-2 h-4 w-4" />
-                    Favoritos
-                  </DropdownMenuItem>
-                </Link>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer text-destructive"
-                  onClick={() => logout()}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Cerrar Sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild className="rounded-full">
-              <a href={getLoginUrl()}>Iniciar Sesión</a>
-            </Button>
-          )}
-
-          {/* Mobile menu */}
+    <>
+      {/* Main Header */}
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="sticky top-0 z-50 w-full bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/5"
+      >
+        <div className="container flex h-16 items-center justify-between">
+          {/* Left - Menu Button */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="rounded-full">
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72">
-              <nav className="flex flex-col gap-2 mt-8">
-                {navLinks.map((link) => {
+            <SheetContent side="left" className="w-[300px] p-0 border-r border-gray-200 dark:border-white/10 bg-white dark:bg-[#09090b]">
+              <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+              {/* Sidebar Header */}
+              <div className="p-4 border-b border-gray-200 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md">
+                      <img 
+                        src="/logo.jpg" 
+                        alt="FCH Noticias" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="font-heading font-bold text-xl">
+                      <span className="text-[#E30613]">FCH</span>
+                      <span className="text-gray-900 dark:text-white"> Noticias</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search in Sidebar */}
+              <div className="p-4">
+                <form onSubmit={handleSearch}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar noticias..."
+                      className="pl-10 bg-gray-100 dark:bg-white/5 border-0 focus-visible:ring-[#E30613]"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </form>
+              </div>
+
+              {/* Categories Section */}
+              <div className="px-4 pb-2">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  Categorías
+                </p>
+              </div>
+              <nav className="px-2 pb-4">
+                {categoryLinks.map((link) => {
                   const Icon = link.icon;
                   const isActive = location === link.href;
                   return (
@@ -217,23 +134,122 @@ export default function Navbar() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <div
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                           isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-[#E30613]/10 text-[#E30613] font-medium"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
                         }`}
                       >
-                        <Icon className="h-5 w-5" />
+                        <Icon className="w-4 h-4" />
                         {link.label}
                       </div>
                     </Link>
                   );
                 })}
               </nav>
+
+              {/* Other Links */}
+              <div className="border-t border-gray-200 dark:border-white/10 p-2">
+                <Link href="/about" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                    Nosotros
+                  </div>
+                </Link>
+                <Link href="/support" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                    Apoya el Proyecto
+                  </div>
+                </Link>
+              </div>
+
+              {/* Dark Mode Toggle */}
+              {toggleTheme && (
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#09090b]">
+                  <button
+                    onClick={toggleTheme}
+                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                  >
+                    {theme === "dark" ? (
+                      <>
+                        <Sun className="w-4 h-4" />
+                        Modo Claro
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-4 h-4" />
+                        Modo Oscuro
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </SheetContent>
           </Sheet>
+
+          {/* Center - Logo */}
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-2"
+            >
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-red-500/20">
+                <img 
+                  src="/logo.jpg" 
+                  alt="FCH Noticias" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
+          </Link>
+
+          {/* Right - Theme Toggle & User */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full hover:bg-gray-100 dark:hover:bg-white/5"
+              onClick={toggleTheme}
+              disabled={!toggleTheme}
+            >
+              <AnimatePresence mode="wait">
+                {theme === "dark" ? (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="h-5 w-5" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="h-5 w-5" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Button>
+
+            {/* User Avatar (if authenticated) */}
+            {isAuthenticated && user && (
+              <Link href="/profile">
+                <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-[#E30613]/20">
+                  <AvatarImage src={user.avatar || undefined} />
+                  <AvatarFallback className="bg-[#E30613] text-white text-xs">
+                    {user.name?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.header>
+      </motion.header>
+    </>
   );
 }

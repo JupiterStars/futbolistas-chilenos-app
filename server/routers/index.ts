@@ -7,9 +7,11 @@ export { newsRouter } from './news';
 export { categoriesRouter } from './categories';
 export { playersRouter } from './players';
 export { transfersRouter } from './transfers';
+export { searchRouter } from './search';
 
 // Re-export types
 export type { NewsRouter } from './news';
 export type { CategoriesRouter } from './categories';
 export type { PlayersRouter } from './players';
 export type { TransfersRouter } from './transfers';
+export type { SearchRouter } from './search';

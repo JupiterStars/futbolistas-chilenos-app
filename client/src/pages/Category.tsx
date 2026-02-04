@@ -138,7 +138,8 @@ export default function Category() {
   const [page, setPage] = useState(1);
   const limit = 12;
 
-  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: categoriesResponse } = trpc.categories.list.useQuery({ limit: 100 });
+  const categories = (categoriesResponse as any)?.items || [];
   const { data: allNews, isLoading } = useCachedNews({
     limit: 100,
   });

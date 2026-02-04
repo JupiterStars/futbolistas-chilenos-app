@@ -1,3 +1,36 @@
+/**
+ * FCH Noticias - Componente EmptyState
+ * 
+ * Componente reutilizable para mostrar estados vacíos con iconos,
+ * títulos, descripciones y acciones personalizables.
+ * 
+ * @example
+ * ```tsx
+ * // Estado vacío básico
+ * <EmptyState type="empty" />
+ * 
+ * // Estado de búsqueda sin resultados
+ * <EmptyState type="search" />
+ * 
+ * // Estado de error con acción
+ * <EmptyState 
+ *   type="error" 
+ *   onAction={() => refetch()}
+ *   actionLabel="Reintentar"
+ * />
+ * 
+ * // Personalizado completo
+ * <EmptyState
+ *   icon={CustomIcon}
+ *   title="Título personalizado"
+ *   description="Descripción detallada"
+ *   action={<Button>Acción</Button>}
+ * />
+ * ```
+ * 
+ * @module client/src/components/EmptyState
+ */
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,6 +46,9 @@ import {
   LucideIcon
 } from "lucide-react";
 
+/**
+ * Tipos predefinidos de estados vacíos con contenido por defecto
+ */
 export type EmptyStateType = 
   | "search" 
   | "empty" 
@@ -23,18 +59,33 @@ export type EmptyStateType =
   | "news"
   | "players";
 
+/**
+ * Props para el componente EmptyState
+ */
 interface EmptyStateProps {
+  /** Tipo predefinido de estado vacío (usa contenido por defecto) */
   type?: EmptyStateType;
+  /** Icono personalizado (sobrescribe el del tipo) */
   icon?: LucideIcon;
+  /** Título personalizado (sobrescribe el del tipo) */
   title?: string;
+  /** Descripción personalizada (sobrescribe la del tipo) */
   description?: string;
+  /** Componente de acción personalizado */
   action?: React.ReactNode;
+  /** Label del botón de acción (si se usa onAction) */
   actionLabel?: string;
+  /** Callback para el botón de acción */
   onAction?: () => void;
+  /** Clases CSS adicionales */
   className?: string;
+  /** Si es true, usa diseño compacto (menos padding, texto más pequeño) */
   compact?: boolean;
 }
 
+/**
+ * Contenido por defecto para cada tipo de estado vacío
+ */
 const defaultContent: Record<EmptyStateType, { 
   icon: LucideIcon; 
   title: string; 
@@ -82,6 +133,15 @@ const defaultContent: Record<EmptyStateType, {
   }
 };
 
+/**
+ * Componente EmptyState - Estados vacíos informativos
+ * 
+ * Muestra un estado vacío con icono, título, descripción y acción opcional.
+ * Incluye animaciones suaves con Framer Motion.
+ * 
+ * @param {EmptyStateProps} props - Props del componente
+ * @returns {JSX.Element} Componente EmptyState
+ */
 export function EmptyState({
   type = "empty",
   icon: CustomIcon,

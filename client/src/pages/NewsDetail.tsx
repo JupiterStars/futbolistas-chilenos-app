@@ -242,7 +242,8 @@ export default function NewsDetail() {
   );
 
   // Usar datos del servidor si están disponibles, sino del cache
-  const data = serverData || (cachedNews ? {
+  // Type assertion necesario por diferencias en tipos entre tRPC y cached data
+  const data = (serverData as any) || (cachedNews ? {
     news: cachedNews,
     category: cachedNews.category
   } : null);

@@ -1,3 +1,7 @@
+/**
+ * Contact.tsx - Contacto integrado
+ * Features: toast, EmptyState
+ */
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -7,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/EmptyState";
+import { toast } from "@/lib/toast";
 import {
   ChevronLeft,
   Mail,
@@ -17,7 +23,6 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 
 const contactReasons = [
   { value: "general", label: "Consulta General" },
@@ -59,12 +64,17 @@ export default function Contact() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    toast.success("¡Mensaje enviado! Te responderemos pronto.");
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      toast.success("¡Mensaje enviado! Te responderemos pronto.");
+    } catch (error) {
+      setIsSubmitting(false);
+      toast.error("Error al enviar el mensaje. Intenta nuevamente.");
+    }
   };
 
   const handleChange = (
@@ -122,24 +132,17 @@ export default function Contact() {
             <Card>
               <CardContent className="p-6">
                 {isSubmitted ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-center py-12"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h2 className="font-heading text-2xl font-bold mb-2">
-                      ¡Mensaje Enviado!
-                    </h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">
-                      Gracias por contactarnos. Te responderemos a la brevedad.
-                    </p>
-                    <Button onClick={() => setIsSubmitted(false)}>
-                      Enviar otro mensaje
-                    </Button>
-                  </motion.div>
+                  <EmptyState
+                    type="empty"
+                    icon={CheckCircle}
+                    title="¡Mensaje Enviado!"
+                    description="Gracias por contactarnos. Te responderemos a la brevedad."
+                    action={
+                      <Button onClick={() => setIsSubmitted(false)}>
+                        Enviar otro mensaje
+                      </Button>
+                    }
+                  />
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid sm:grid-cols-2 gap-4">

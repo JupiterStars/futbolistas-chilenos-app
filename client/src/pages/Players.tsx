@@ -109,15 +109,19 @@ export default function Players() {
   const [page, setPage] = useState(1);
   const limit = 16;
 
-  const { data: allPlayers, isLoading } = trpc.players.list.useQuery({
+  const { data: playersResponse, isLoading } = trpc.players.list.useQuery({
     position: position !== "all" ? position : undefined,
-    orderBy: sortBy,
+    orderBy: sortBy as any,
     limit: 100,
   });
 
+  // Extraer items del response
+  const allPlayers = (playersResponse as any)?.items || [];
+
   // Filter players by search
   const filteredPlayers = allPlayers?.filter((item: any) =>
-    item.player.name.toLowerCase().includes(searchQuery.toLowerCase())
+    item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.player?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Pagination
@@ -197,16 +201,21 @@ export default function Players() {
               animate={{ opacity: 1 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
             >
-              {paginatedPlayers.map((item: any, index: number) => (
-                <motion.div
-                  key={item.player.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <PlayerCard player={item.player} team={item.team} />
-                </motion.div>
-              ))}
+              {paginatedPlayers.map((item: any, index: number) => {
+                // Adaptar a diferentes formatos de respuesta
+                const player = item.player || item;
+                const team = item.team || player.team;
+                return (
+                  <motion.div
+                    key={player.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <PlayerCard player={player} team={team} />
+                  </motion.div>
+                );
+              })}
             </motion.div>
           </InfiniteScroll>
         ) : (

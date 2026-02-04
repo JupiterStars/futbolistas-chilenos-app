@@ -92,7 +92,7 @@ export function useCachedNews(
       limit,
       categoryId: categoryId ? parseInt(categoryId) : undefined,
       featured,
-    },
+    } as any,
     {
       enabled: enabled && navigator.onLine,
       retry: 2,
@@ -297,7 +297,7 @@ export function useCachedNewsById(
   
   // Query de tRPC
   const trpcQuery = trpc.news.getById.useQuery(
-    { id: newsId ? parseInt(newsId) : 0 },
+    { id: newsId ? parseInt(newsId) : 0 } as any,
     {
       enabled: enabled && !!newsId && navigator.onLine,
       retry: 2,

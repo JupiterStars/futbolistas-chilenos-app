@@ -107,27 +107,18 @@ export default function PlayerDetail() {
   );
 
   // Usar datos del servidor si están disponibles, sino del cache
-  const data = serverData || (cachedPlayer ? {
-    player: cachedPlayer,
-    team: cachedPlayer.team
-  } : null);
-  
+  const player = (serverData || cachedPlayer) as any;
   const isLoading = isLoadingCached && isLoadingServer;
 
-  const { data: playerNews } = trpc.players.getNews.useQuery(
-    { playerId: data?.player.id || 0, limit: 5 },
-    { enabled: !!data?.player.id }
-  );
-
   const { data: isFavorited } = trpc.favorites.players.check.useQuery(
-    { playerId: data?.player.id || 0 },
-    { enabled: !!data?.player.id && isAuthenticated }
+    { playerId: player?.id ? parseInt(player.id) : 0 },
+    { enabled: !!player?.id && isAuthenticated }
   );
 
   const utils = trpc.useUtils();
   const toggleFavorite = trpc.favorites.players.toggle.useMutation({
     onSuccess: (result) => {
-      utils.favorites.players.check.invalidate({ playerId: data?.player.id });
+      utils.favorites.players.check.invalidate({ playerId: player?.id });
       if (result.isFavorited) {
         toast.success("Jugador añadido a favoritos");
       } else {
@@ -142,7 +133,7 @@ export default function PlayerDetail() {
   const handleShare = async () => {
     try {
       await navigator.share({
-        title: data?.player.name,
+        title: player?.name,
         url: window.location.href,
       });
       toast.success("Compartido exitosamente");
@@ -162,7 +153,7 @@ export default function PlayerDetail() {
     );
   }
 
-  if (!data) {
+  if (!player) {
     return (
       <Layout>
         <div className="container py-8">
@@ -181,7 +172,8 @@ export default function PlayerDetail() {
     );
   }
 
-  const { player, team } = data;
+  // Extraer team de los datos (si existe)
+  const team = (player as any).team || null;
 
   return (
     <Layout>
@@ -217,7 +209,7 @@ export default function PlayerDetail() {
                   {/* Rating */}
                   <div className="absolute top-4 right-4 w-16 h-16 rounded-full gradient-chile flex items-center justify-center">
                     <span className="text-2xl font-bold text-white">
-                      {Number(player.overallRating).toFixed(0)}
+                      {Number(player.overallRating || 0).toFixed(0)}
                     </span>
                   </div>
 
@@ -238,7 +230,7 @@ export default function PlayerDetail() {
                       <Button
                         variant={isFavorited ? "default" : "outline"}
                         className="flex-1"
-                        onClick={() => toggleFavorite.mutate({ playerId: player.id })}
+                        onClick={() => toggleFavorite.mutate({ playerId: parseInt(player.id) })}
                       >
                         <Heart className={`w-4 h-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
                         {isFavorited ? "Favorito" : "Seguir"}
@@ -300,7 +292,6 @@ export default function PlayerDetail() {
               <TabsList className="w-full justify-start mb-6">
                 <TabsTrigger value="stats">Estadísticas</TabsTrigger>
                 <TabsTrigger value="skills">Habilidades</TabsTrigger>
-                <TabsTrigger value="news">Noticias</TabsTrigger>
               </TabsList>
 
               <TabsContent value="stats">
@@ -316,24 +307,24 @@ export default function PlayerDetail() {
                       <StatCard 
                         icon={Target} 
                         label="Goles" 
-                        value={player.goals} 
+                        value={player.goals || 0} 
                         color="primary"
                       />
                       <StatCard 
                         icon={Users} 
                         label="Asistencias" 
-                        value={player.assists}
+                        value={player.assists || 0}
                         color="secondary" 
                       />
                       <StatCard 
                         icon={Trophy} 
                         label="Partidos" 
-                        value={player.matches} 
+                        value={player.matches || 0} 
                       />
                       <StatCard 
                         icon={Clock} 
                         label="Minutos" 
-                        value={player.minutesPlayed.toLocaleString()} 
+                        value={(player.minutesPlayed || 0).toLocaleString()} 
                       />
                     </div>
 
@@ -343,14 +334,14 @@ export default function PlayerDetail() {
                         <div className="flex items-center gap-3 p-3 bg-yellow-500/10 rounded-lg">
                           <div className="w-6 h-8 bg-yellow-500 rounded" />
                           <div>
-                            <p className="font-bold">{player.yellowCards}</p>
+                            <p className="font-bold">{player.yellowCards || 0}</p>
                             <p className="text-xs text-muted-foreground">Amarillas</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-lg">
                           <div className="w-6 h-8 bg-red-500 rounded" />
                           <div>
-                            <p className="font-bold">{player.redCards}</p>
+                            <p className="font-bold">{player.redCards || 0}</p>
                             <p className="text-xs text-muted-foreground">Rojas</p>
                           </div>
                         </div>
@@ -370,12 +361,12 @@ export default function PlayerDetail() {
                     
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                       {[
-                        { label: "Ritmo", value: player.pace },
-                        { label: "Tiro", value: player.shooting },
-                        { label: "Pase", value: player.passing },
-                        { label: "Regate", value: player.dribbling },
-                        { label: "Defensa", value: player.defending },
-                        { label: "Físico", value: player.physical },
+                        { label: "Ritmo", value: player.pace || 0 },
+                        { label: "Tiro", value: player.shooting || 0 },
+                        { label: "Pase", value: player.passing || 0 },
+                        { label: "Regate", value: player.dribbling || 0 },
+                        { label: "Defensa", value: player.defending || 0 },
+                        { label: "Físico", value: player.physical || 0 },
                       ].map((skill) => (
                         <div key={skill.label} className="bg-muted rounded-lg p-3">
                           <div className="flex justify-between items-center mb-2">
@@ -393,48 +384,6 @@ export default function PlayerDetail() {
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="news">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Noticias Relacionadas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {playerNews && playerNews.length > 0 ? (
-                      <div className="space-y-4">
-                        {playerNews.map((item) => (
-                          <Link key={item.news.id} href={`/news/${item.news.slug}`}>
-                            <div className="flex gap-4 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                              <OptimizedImage
-                                src={item.news.imageUrl || "/chile-team-1.jpg"}
-                                alt={item.news.title}
-                                width={96}
-                                height={64}
-                                className="object-cover rounded"
-                              />
-                              <div className="flex-1">
-                                <h4 className="font-medium line-clamp-2 hover:text-primary transition-colors">
-                                  {item.news.title}
-                                </h4>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(item.news.publishedAt).toLocaleDateString('es-CL')}
-                                </p>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState 
-                        type="news" 
-                        title="No hay noticias relacionadas"
-                        description="Aún no hay noticias sobre este jugador"
-                        compact
-                      />
-                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

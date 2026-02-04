@@ -1,12 +1,53 @@
+/**
+ * FCH Noticias - Hook usePWA
+ * 
+ * Hook para gestionar el estado de la Progressive Web App (PWA),
+ * incluyendo detección de instalación, estado offline y prompt de instalación.
+ * 
+ * @example
+ * ```tsx
+ * function InstallButton() {
+ *   const { isInstallable, isInstalled, isOffline, installApp } = usePWA();
+ *   
+ *   if (isInstalled) return <p>App instalada</p>;
+ *   if (isOffline) return <p>Modo offline activo</p>;
+ *   
+ *   return isInstallable ? (
+ *     <button onClick={installApp}>Instalar App</button>
+ *   ) : null;
+ * }
+ * ```
+ * 
+ * @module client/src/hooks/usePWA
+ */
+
 import { useState, useEffect } from 'react';
 
+/**
+ * Estado de la PWA
+ */
 interface PWAState {
+  /** Si la app puede ser instalada */
   isInstallable: boolean;
+  /** Si la app está instalada (standalone mode) */
   isInstalled: boolean;
+  /** Si el dispositivo está offline */
   isOffline: boolean;
+  /** Evento de prompt de instalación (si disponible) */
   deferredPrompt: Event | null;
 }
 
+/**
+ * Hook usePWA - Gestión del estado PWA
+ * 
+ * Características:
+ * - Detecta si la app está instalada
+ * - Captura el evento beforeinstallprompt
+ * - Monitorea estado online/offline
+ * - Permite disparar la instalación programáticamente
+ * 
+ * @returns {PWAState & { installApp: () => Promise<void> }} Estado PWA y función de instalación
+ */
 export function usePWA() {
   const [state, setState] = useState<PWAState>({
     isInstallable: false,
@@ -68,6 +109,10 @@ export function usePWA() {
     };
   }, []);
 
+  /**
+   * Dispara el prompt de instalación de la PWA
+   * Solo funciona si el evento beforeinstallprompt fue capturado
+   */
   const installApp = async () => {
     if (!state.deferredPrompt) return;
 
@@ -93,7 +138,22 @@ export function usePWA() {
   };
 }
 
-// Register service worker
+/**
+ * Registra el Service Worker para la PWA
+ * 
+ * Esta función debe llamarse una vez al inicio de la aplicación,
+ * típicamente en main.tsx.
+ * 
+ * @example
+ * ```tsx
+ * // main.tsx
+ * import { registerServiceWorker } from './hooks/usePWA';
+ * 
+ * if (process.env.NODE_ENV === 'production') {
+ *   registerServiceWorker();
+ * }
+ * ```
+ */
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

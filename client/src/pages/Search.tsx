@@ -25,6 +25,56 @@ import {
   X,
 } from "lucide-react";
 
+// Tipos de resultados
+interface NewsResultItem {
+  news: {
+    id: number;
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    imageUrl: string | null;
+    publishedAt: Date;
+    views: number;
+  };
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+}
+
+interface PlayerResultItem {
+  player: {
+    id: number;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    position: string;
+    overallRating: number | string;
+  };
+  team: {
+    id: number;
+    name: string;
+    shortName: string | null;
+  } | null;
+}
+
+interface TeamResultItem {
+  id: number;
+  name: string;
+  shortName: string | null;
+  logo: string | null;
+  league: string | null;
+  country: string | null;
+}
+
+interface SearchResults {
+  news: NewsResultItem[];
+  players: PlayerResultItem[];
+  teams: TeamResultItem[];
+  query: string;
+}
+
 export default function Search() {
   const searchParams = useSearch();
   const initialQuery = new URLSearchParams(searchParams).get("q") || "";
@@ -45,10 +95,12 @@ export default function Search() {
     { enabled: debouncedQuery.length >= 2 }
   );
 
+  const typedResults = results as SearchResults | undefined;
+
   const totalResults = 
-    (results?.news?.length || 0) + 
-    (results?.players?.length || 0) + 
-    (results?.teams?.length || 0);
+    (typedResults?.news?.length || 0) + 
+    (typedResults?.players?.length || 0) + 
+    (typedResults?.teams?.length || 0);
 
   // Mostrar toast si hay error de búsqueda
   useEffect(() => {
@@ -132,29 +184,29 @@ export default function Search() {
                 </TabsTrigger>
                 <TabsTrigger value="news">
                   <Newspaper className="w-4 h-4 mr-2" />
-                  Noticias ({results?.news?.length || 0})
+                  Noticias ({typedResults?.news?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="players">
                   <Users className="w-4 h-4 mr-2" />
-                  Jugadores ({results?.players?.length || 0})
+                  Jugadores ({typedResults?.players?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="teams">
                   <Building2 className="w-4 h-4 mr-2" />
-                  Equipos ({results?.teams?.length || 0})
+                  Equipos ({typedResults?.teams?.length || 0})
                 </TabsTrigger>
               </TabsList>
 
               {/* All results */}
               <TabsContent value="all" className="space-y-6">
                 {/* News */}
-                {results?.news && results.news.length > 0 && (
+                {typedResults?.news && typedResults.news.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Newspaper className="w-4 h-4" />
                       Noticias
                     </h3>
                     <div className="space-y-3">
-                      {results.news.slice(0, 5).map((item) => (
+                      {typedResults.news.slice(0, 5).map((item) => (
                         <NewsResult key={item.news.id} item={item} />
                       ))}
                     </div>
@@ -162,14 +214,14 @@ export default function Search() {
                 )}
 
                 {/* Players */}
-                {results?.players && results.players.length > 0 && (
+                {typedResults?.players && typedResults.players.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       Jugadores
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {results.players.slice(0, 4).map((item) => (
+                      {typedResults.players.slice(0, 4).map((item) => (
                         <PlayerResult key={item.player.id} item={item} />
                       ))}
                     </div>
@@ -177,14 +229,14 @@ export default function Search() {
                 )}
 
                 {/* Teams */}
-                {results?.teams && results.teams.length > 0 && (
+                {typedResults?.teams && typedResults.teams.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Building2 className="w-4 h-4" />
                       Equipos
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {results.teams.slice(0, 4).map((team) => (
+                      {typedResults.teams.slice(0, 4).map((team) => (
                         <TeamResult key={team.id} team={team} />
                       ))}
                     </div>
@@ -194,21 +246,21 @@ export default function Search() {
 
               {/* News only */}
               <TabsContent value="news" className="space-y-3">
-                {results?.news?.map((item) => (
+                {typedResults?.news?.map((item) => (
                   <NewsResult key={item.news.id} item={item} />
                 ))}
               </TabsContent>
 
               {/* Players only */}
               <TabsContent value="players" className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {results?.players?.map((item) => (
+                {typedResults?.players?.map((item) => (
                   <PlayerResult key={item.player.id} item={item} />
                 ))}
               </TabsContent>
 
               {/* Teams only */}
               <TabsContent value="teams" className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {results?.teams?.map((team) => (
+                {typedResults?.teams?.map((team) => (
                   <TeamResult key={team.id} team={team} />
                 ))}
               </TabsContent>
@@ -220,7 +272,7 @@ export default function Search() {
   );
 }
 
-function NewsResult({ item }: { item: any }) {
+function NewsResult({ item }: { item: NewsResultItem }) {
   return (
     <Link href={`/news/${item.news.slug}`}>
       <motion.div
@@ -261,7 +313,7 @@ function NewsResult({ item }: { item: any }) {
   );
 }
 
-function PlayerResult({ item }: { item: any }) {
+function PlayerResult({ item }: { item: PlayerResultItem }) {
   return (
     <Link href={`/players/${item.player.slug}`}>
       <motion.div
@@ -295,7 +347,7 @@ function PlayerResult({ item }: { item: any }) {
   );
 }
 
-function TeamResult({ team }: { team: any }) {
+function TeamResult({ team }: { team: TeamResultItem }) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}

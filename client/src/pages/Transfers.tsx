@@ -24,19 +24,35 @@ import {
   FileText,
 } from "lucide-react";
 
-function TransferCard({ transfer }: { transfer: any }) {
-  const { data: details } = trpc.transfers.getById.useQuery(
-    { id: transfer.id },
-    { enabled: !!transfer.id }
-  );
+interface TransferWithPlayer {
+  id: string;
+  playerId: string;
+  fromTeam: string | null;
+  toTeam: string | null;
+  fee: string | null;
+  feeType: string | null;
+  contractYears: number | null;
+  status: string;
+  type: string;
+  date: Date | null;
+  announcedAt: Date | null;
+  source: string | null;
+  createdAt: Date;
+  player: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    position: string;
+  };
+}
 
-  const player = details?.player?.player;
-  const fromTeam = details?.fromTeam;
-  const toTeam = details?.toTeam;
+function TransferCard({ transfer }: { transfer: TransferWithPlayer }) {
+  const player = transfer.player;
 
-  const formatFee = (fee: string | null, feeType: string) => {
-    if (feeType === "free") return "Gratis";
-    if (feeType === "loan") return "Préstamo";
+  const formatFee = (fee: string | null, feeType: string | null) => {
+    if (feeType === "free" || feeType === "gratis") return "Gratis";
+    if (feeType === "loan" || feeType === "prestamo") return "Préstamo";
     if (feeType === "undisclosed" || !fee) return "No revelado";
     return `€${Number(fee).toLocaleString()}`;
   };
@@ -75,23 +91,13 @@ function TransferCard({ transfer }: { transfer: any }) {
       <div className="flex items-center gap-4">
         {/* From Team */}
         <div className="flex-1 text-center">
-          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-            {fromTeam?.logo ? (
-              <OptimizedImage
-                src={fromTeam.logo}
-                alt={fromTeam.name}
-                width={48}
-                height={48}
-                className="object-contain"
-              />
-            ) : (
-              <span className="text-2xl font-bold text-muted-foreground">
-                {fromTeam?.shortName?.charAt(0) || "?"}
-              </span>
-            )}
+          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center">
+            <span className="text-2xl font-bold text-muted-foreground">
+              {transfer.fromTeam?.charAt(0) || "?"}
+            </span>
           </div>
           <p className="text-sm font-medium truncate">
-            {fromTeam?.name || "Desconocido"}
+            {transfer.fromTeam || "Desconocido"}
           </p>
         </div>
 
@@ -123,23 +129,13 @@ function TransferCard({ transfer }: { transfer: any }) {
 
         {/* To Team */}
         <div className="flex-1 text-center">
-          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-            {toTeam?.logo ? (
-              <OptimizedImage
-                src={toTeam.logo}
-                alt={toTeam.name}
-                width={48}
-                height={48}
-                className="object-contain"
-              />
-            ) : (
-              <span className="text-2xl font-bold text-muted-foreground">
-                {toTeam?.shortName?.charAt(0) || "?"}
-              </span>
-            )}
+          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center">
+            <span className="text-2xl font-bold text-muted-foreground">
+              {transfer.toTeam?.charAt(0) || "?"}
+            </span>
           </div>
           <p className="text-sm font-medium truncate">
-            {toTeam?.name || "Desconocido"}
+            {transfer.toTeam || "Desconocido"}
           </p>
         </div>
       </div>
@@ -192,7 +188,8 @@ export default function Transfers() {
     }
   };
 
-  const { data: transfers, loading } = getTransfers();
+  const { data: transfersData, loading } = getTransfers();
+  const transfers = transfersData?.items || [];
 
   return (
     <Layout>
@@ -228,10 +225,10 @@ export default function Transfers() {
             {loading ? (
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <ListSkeleton key={i} items={1} showAvatar showBadge />
+                  <ListSkeleton key={i} items={1} showAvatar />
                 ))}
               </div>
-            ) : transfers && transfers.length > 0 ? (
+            ) : transfers.length > 0 ? (
               <div className="space-y-4">
                 {transfers.map((transfer, index) => (
                   <motion.div
@@ -240,7 +237,7 @@ export default function Transfers() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <TransferCard transfer={transfer} />
+                    <TransferCard transfer={transfer as unknown as TransferWithPlayer} />
                   </motion.div>
                 ))}
               </div>

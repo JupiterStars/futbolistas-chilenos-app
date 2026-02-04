@@ -10,6 +10,7 @@ import { newsRouter } from "./routers/news";
 import { categoriesRouter } from "./routers/categories";
 import { playersRouter } from "./routers/players";
 import { transfersRouter } from "./routers/transfers";
+import { searchRouter } from "./routers/search";
 
 export const appRouter = router({
   system: systemRouter,
@@ -296,13 +297,7 @@ export const appRouter = router({
   }),
 
   // ============ SEARCH ============
-  search: router({
-    all: publicProcedure
-      .input(z.object({ query: z.string().min(1), limit: z.number().default(10) }))
-      .query(async ({ input }) => {
-        return db.searchAll ? db.searchAll(input.query, input.limit) : [];
-      }),
-  }),
+  search: searchRouter,
 });
 
 export type AppRouter = typeof appRouter;

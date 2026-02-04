@@ -1,19 +1,68 @@
+/**
+ * FCH Noticias - Componente InfiniteScroll
+ * 
+ * Componente para implementar scroll infinito con Intersection Observer.
+ * Detecta cuando el usuario llega al final de la lista y carga más contenido.
+ * 
+ * @example
+ * ```tsx
+ * <InfiniteScroll
+ *   onLoadMore={async () => {
+ *     const newItems = await fetchMoreItems(page + 1);
+ *     setItems(prev => [...prev, ...newItems]);
+ *     setPage(p => p + 1);
+ *   }}
+ *   hasMore={hasMore}
+ *   threshold={200}
+ * >
+ *   {items.map(item => <Card key={item.id} {...item} />)}
+ * </InfiniteScroll>
+ * ```
+ * 
+ * @module client/src/components/InfiniteScroll
+ */
+
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props para el componente InfiniteScroll
+ */
 interface InfiniteScrollProps {
+  /** Callback que se ejecuta cuando se debe cargar más contenido */
   onLoadMore: () => Promise<void>;
+  /** Indica si hay más contenido para cargar */
   hasMore: boolean;
+  /** Distancia en px desde el final para iniciar carga (default: 100) */
   threshold?: number;
+  /** Componente personalizado de loader (opcional) */
   loader?: React.ReactNode;
+  /** Contenido a renderizar */
   children: React.ReactNode;
+  /** Clases CSS adicionales para el contenedor */
   className?: string;
+  /** Clases CSS adicionales para el loader */
   loaderClassName?: string;
+  /** Si es true, carga contenido al hacer scroll hacia arriba (chat-style) */
   reverse?: boolean;
+  /** Tiempo de debounce entre cargas en ms (default: 200) */
   debounceMs?: number;
 }
 
+/**
+ * Componente InfiniteScroll - Scroll infinito con Intersection Observer
+ * 
+ * Características:
+ * - Detección automática del final de la lista
+ * - Debounce para evitar múltiples cargas simultáneas
+ * - Loader personalizable
+ * - Mensaje de "No hay más contenido"
+ * - Soporte para scroll inverso (chat)
+ * 
+ * @param {InfiniteScrollProps} props - Props del componente
+ * @returns {JSX.Element} Componente InfiniteScroll
+ */
 export function InfiniteScroll({
   onLoadMore,
   hasMore,

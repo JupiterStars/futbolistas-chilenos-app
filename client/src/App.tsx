@@ -1,7 +1,14 @@
 /**
- * App.tsx - Configuración principal con lazy loading y Suspense
- * Optimizado para code splitting y carga progresiva de páginas
+ * App.tsx - Entry Point de FCH Noticias
+ * 
+ * Configuración principal con:
+ * - Lazy loading desde barrel file pages/index.ts
+ * - Suspense con PageLoader como fallback
+ * - Error Boundaries en cada ruta
+ * - Service Worker update notifications
+ * - Online/Offline status indicators
  */
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -12,26 +19,80 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { PageLoader } from "./components/PageLoader";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useServiceWorker } from "./hooks/useServiceWorker";
+import { toast } from "./lib/toast";
 
-// Lazy imports de todas las páginas para code splitting
-const Home = lazy(() => import("./pages/Home"));
-const NewsList = lazy(() => import("./pages/NewsList"));
-const NewsDetail = lazy(() => import("./pages/NewsDetail"));
-const Players = lazy(() => import("./pages/Players"));
-const PlayerDetail = lazy(() => import("./pages/PlayerDetail"));
-const Leaderboards = lazy(() => import("./pages/Leaderboards"));
-const Transfers = lazy(() => import("./pages/Transfers"));
-const Search = lazy(() => import("./pages/Search"));
-const Favorites = lazy(() => import("./pages/Favorites"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Category = lazy(() => import("./pages/Category"));
-const About = lazy(() => import("./pages/About"));
-const Support = lazy(() => import("./pages/Support"));
-const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const Disclaimer = lazy(() => import("./pages/Disclaimer"));
-const Contact = lazy(() => import("./pages/Contact"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Lazy imports desde barrel file para code splitting
+import {
+  Home,
+  NewsList,
+  NewsDetail,
+  Players,
+  PlayerDetail,
+  Category,
+  Leaderboards,
+  Transfers,
+  Search,
+  Favorites,
+  Profile,
+  About,
+  Support,
+  Terms,
+  Privacy,
+  Disclaimer,
+  Contact,
+  NotFound,
+  ComponentShowcase,
+} from "./pages";
+
+/**
+ * Componente para manejar notificaciones del Service Worker
+ * Muestra toasts cuando hay actualizaciones disponibles
+ */
+function ServiceWorkerNotifications() {
+  const { isUpdated, isOnline, updateApp } = useServiceWorker();
+
+  // Notificar cuando hay una actualización disponible
+  useEffect(() => {
+    if (isUpdated) {
+      toast.info("Actualización disponible", {
+        description: "Hay una nueva versión de la app disponible",
+        action: {
+          label: "Actualizar",
+          onClick: () => updateApp(),
+        },
+        duration: 10000,
+      });
+    }
+  }, [isUpdated, updateApp]);
+
+  // Notificar cuando se pierde/restaura la conexión
+  useEffect(() => {
+    const handleOffline = () => {
+      toast.warning("Sin conexión", {
+        description: "Estás en modo offline. Algunas funciones pueden no estar disponibles.",
+        duration: 5000,
+      });
+    };
+
+    const handleOnline = () => {
+      toast.success("¡Conexión restaurada!", {
+        description: "Sincronizando datos...",
+        duration: 3000,
+      });
+    };
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  return null;
+}
 
 /**
  * Router con Suspense para lazy loading de páginas
@@ -176,6 +237,17 @@ function Router() {
         )}
       </Route>
 
+      {/* Ruta de desarrollo - solo en development */}
+      {import.meta.env.DEV && (
+        <Route path="/components">
+          {() => (
+            <PageErrorBoundary>
+              <ComponentShowcase />
+            </PageErrorBoundary>
+          )}
+        </Route>
+      )}
+
       <Route path="/404">
         {() => (
           <PageErrorBoundary>
@@ -205,6 +277,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
           <Toaster />
+          <ServiceWorkerNotifications />
           <Suspense fallback={<PageLoader />}>
             <Router />
           </Suspense>

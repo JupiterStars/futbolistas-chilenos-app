@@ -226,7 +226,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingScorers ? (
-                  <ListSkeleton items={10} showAvatar showBadge />
+                  <ListSkeleton items={10} showAvatar showIcon />
                 ) : topScorers && topScorers.length > 0 ? (
                   <>
                     <TopThreePodium data={topScorers} valueKey="goals" label="goles" />
@@ -265,7 +265,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingAssisters ? (
-                  <ListSkeleton items={10} showAvatar showBadge />
+                  <ListSkeleton items={10} showAvatar showIcon />
                 ) : topAssisters && topAssisters.length > 0 ? (
                   <>
                     <TopThreePodium data={topAssisters} valueKey="assists" label="asistencias" />
@@ -304,7 +304,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingRated ? (
-                  <ListSkeleton items={10} showAvatar showBadge />
+                  <ListSkeleton items={10} showAvatar showIcon />
                 ) : topRated && topRated.length > 0 ? (
                   <>
                     <TopThreePodium 

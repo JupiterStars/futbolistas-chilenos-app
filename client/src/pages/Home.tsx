@@ -376,7 +376,8 @@ function CategoryTabs({
 // News Grid Section con GridSkeleton
 function NewsGrid() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: categoriesResponse } = trpc.categories.list.useQuery({ limit: 100 });
+  const categories = (categoriesResponse as any)?.items || [];
   const { data: newsList, isLoading } = useCachedNews({
     categoryId: activeCategory !== "all" ? activeCategory : undefined,
     limit: 8,
@@ -403,7 +404,7 @@ function NewsGrid() {
         <CategoryTabs 
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
-          categories={categories || []}
+          categories={Array.isArray(categories) ? categories : []}
         />
       </div>
 

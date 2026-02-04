@@ -132,10 +132,11 @@ export default function NewsList() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const limit = 12;
 
-  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: categoriesResponse } = trpc.categories.list.useQuery({ limit: 100 });
+  const categories = (categoriesResponse as any)?.items || [];
   
   // Usar InfiniteScroll con paginación
-  const { data: allNews, isLoading, error } = trpc.news.list.useQuery({
+  const { data: newsResponse, isLoading, error } = trpc.news.list.useQuery({
     limit: page * limit,
   });
 
@@ -144,8 +145,11 @@ export default function NewsList() {
     toast.error("Error al cargar noticias. Intenta nuevamente.");
   }
 
+  // Extraer items del response paginado
+  const allNews = (newsResponse as any)?.items || [];
+
   // Filter and search news
-  let filteredNews = allNews || [];
+  let filteredNews = allNews;
   
   if (selectedCategory) {
     filteredNews = filteredNews.filter((item: any) => item.category?.slug === selectedCategory);
@@ -154,8 +158,8 @@ export default function NewsList() {
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filteredNews = filteredNews.filter((item: any) => 
-      item.news.title.toLowerCase().includes(query) ||
-      item.news.excerpt.toLowerCase().includes(query)
+      item.title?.toLowerCase().includes(query) ||
+      item.excerpt?.toLowerCase().includes(query)
     );
   }
 
@@ -252,7 +256,7 @@ export default function NewsList() {
               >
                 Todas
               </Button>
-              {categories?.map((cat) => (
+              {categories?.map((cat: any) => (
                 <Button
                   key={cat.id}
                   variant={selectedCategory === cat.slug ? "default" : "outline"}

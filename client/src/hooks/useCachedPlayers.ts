@@ -295,7 +295,7 @@ export function useCachedPlayerById(
   
   // Query de tRPC
   const trpcQuery = trpc.players.getById.useQuery(
-    { id: playerId ? parseInt(playerId) : 0 },
+    { id: playerId ? parseInt(playerId) : 0 } as any,
     {
       enabled: enabled && !!playerId && navigator.onLine,
       retry: 2,

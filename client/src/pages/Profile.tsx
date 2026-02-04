@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { FullScreenLoading } from "@/components/LoadingOverlay";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "@/lib/toast";
 import { getLoginUrl } from "@/const";
@@ -104,9 +104,8 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="container py-8 max-w-4xl relative">
-        <LoadingOverlay isLoading={isLoggingOut} message="Cerrando sesión..." />
-        
+      <FullScreenLoading isLoading={isLoggingOut} text="Cerrando sesión..." />
+      <div className="container py-8 max-w-4xl">
         {/* Profile header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

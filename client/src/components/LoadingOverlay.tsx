@@ -1,17 +1,63 @@
+/**
+ * FCH Noticias - Componente LoadingOverlay
+ * 
+ * Componentes para mostrar estados de carga con diferentes variantes:
+ * - LoadingOverlay: Superposición sobre contenido existente
+ * - FullScreenLoading: Pantalla completa de carga
+ * - ButtonLoading: Wrapper para estado de carga en botones
+ * 
+ * @example
+ * ```tsx
+ * // Overlay sobre contenido
+ * <LoadingOverlay isLoading={isLoading} text="Guardando...">
+ *   <Form>...</Form>
+ * </LoadingOverlay>
+ * 
+ * // Pantalla completa
+ * <FullScreenLoading isLoading={isSubmitting} text="Iniciando sesión..." />
+ * 
+ * // Botón con estado de carga
+ * <ButtonLoading isLoading={isSaving} loadingText="Guardando">
+ *   <Button>Guardar cambios</Button>
+ * </ButtonLoading>
+ * ```
+ * 
+ * @module client/src/components/LoadingOverlay
+ */
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props para el componente LoadingOverlay
+ */
 interface LoadingOverlayProps {
+  /** Si se debe mostrar el overlay */
   isLoading: boolean;
+  /** Texto a mostrar durante la carga */
   text?: string;
+  /** Contenido sobre el que se superpone el loader */
   children: React.ReactNode;
+  /** Clases CSS adicionales para el contenedor */
   className?: string;
+  /** Clases CSS adicionales para el overlay */
   overlayClassName?: string;
+  /** Si se debe aplicar blur al fondo */
   blur?: boolean;
+  /** Si se debe prevenir interacción con el contenido (default: true) */
   preventInteraction?: boolean;
 }
 
+/**
+ * LoadingOverlay - Superposición de carga sobre contenido
+ * 
+ * Muestra un spinner centrado sobre el contenido mientras isLoading es true.
+ * Incluye animaciones de entrada/salida suaves.
+ * 
+ * @param {LoadingOverlayProps} props - Props del componente
+ * @returns {JSX.Element} Componente LoadingOverlay
+ */
 export function LoadingOverlay({
   isLoading,
   text = "Cargando...",
@@ -65,13 +111,27 @@ export function LoadingOverlay({
   );
 }
 
-// Full-screen loading overlay variant
+/**
+ * Props para el componente FullScreenLoading
+ */
 interface FullScreenLoadingProps {
+  /** Si se debe mostrar el loader de pantalla completa */
   isLoading: boolean;
+  /** Texto a mostrar durante la carga */
   text?: string;
+  /** Clases CSS adicionales */
   className?: string;
 }
 
+/**
+ * FullScreenLoading - Pantalla completa de carga
+ * 
+ * Muestra un spinner centrado en toda la pantalla.
+ * Útil para carga inicial o transiciones de página.
+ * 
+ * @param {FullScreenLoadingProps} props - Props del componente
+ * @returns {JSX.Element|null} Componente FullScreenLoading
+ */
 export function FullScreenLoading({
   isLoading,
   text = "Cargando...",
@@ -117,14 +177,29 @@ export function FullScreenLoading({
   );
 }
 
-// Button loading state wrapper
+/**
+ * Props para el componente ButtonLoading
+ */
 interface ButtonLoadingProps {
+  /** Si el botón está en estado de carga */
   isLoading: boolean;
+  /** Contenido del botón (visible cuando no está cargando) */
   children: React.ReactNode;
+  /** Texto a mostrar durante la carga (opcional) */
   loadingText?: string;
+  /** Clases CSS adicionales */
   className?: string;
 }
 
+/**
+ * ButtonLoading - Wrapper para estado de carga en botones
+ * 
+ * Envuelve un botón y muestra un spinner durante la carga,
+ * manteniendo el espacio del botón para evitar saltos de layout.
+ * 
+ * @param {ButtonLoadingProps} props - Props del componente
+ * @returns {JSX.Element} Componente ButtonLoading
+ */
 export function ButtonLoading({
   isLoading,
   children,

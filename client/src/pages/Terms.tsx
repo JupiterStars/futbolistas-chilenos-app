@@ -1,3 +1,7 @@
+/**
+ * Terms.tsx - Términos y condiciones
+ * Features: Minimal integration (layout and navigation)
+ */
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";

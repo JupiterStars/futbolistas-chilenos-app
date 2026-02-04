@@ -1,3 +1,7 @@
+/**
+ * NewsDetail.tsx - Detalle de noticia integrado
+ * Features: OptimizedImage, DetailSkeleton, useCachedNewsBySlug, toast
+ */
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
@@ -6,10 +10,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { DetailSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
+import { useCachedNewsBySlug } from "@/hooks/useCachedNews";
+import { toast } from "@/lib/toast";
 import DOMPurify from "dompurify";
 import {
   Clock,
@@ -60,11 +67,11 @@ function CommentSection({ newsId }: { newsId: number }) {
   };
 
   // Organize comments into threads
-  const rootComments = comments?.filter(c => !c.comment.parentId) || [];
-  const replies = comments?.filter(c => c.comment.parentId) || [];
+  const rootComments = comments?.filter((c: any) => !c.comment.parentId) || [];
+  const replies = comments?.filter((c: any) => c.comment.parentId) || [];
 
   const getReplies = (parentId: number) => 
-    replies.filter(r => r.comment.parentId === parentId);
+    replies.filter((r: any) => r.comment.parentId === parentId);
 
   return (
     <section className="mt-12">
@@ -127,17 +134,17 @@ function CommentSection({ newsId }: { newsId: number }) {
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex gap-4">
-              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="w-10 h-10 rounded-full bg-muted" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-16 w-full" />
+                <div className="h-4 w-32 bg-muted rounded" />
+                <div className="h-16 w-full bg-muted rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : rootComments.length > 0 ? (
         <div className="space-y-6">
-          {rootComments.map((item) => (
+          {rootComments.map((item: any) => (
             <motion.div
               key={item.comment.id}
               initial={{ opacity: 0, y: 10 }}
@@ -181,7 +188,7 @@ function CommentSection({ newsId }: { newsId: number }) {
                 {/* Replies */}
                 {getReplies(item.comment.id).length > 0 && (
                   <div className="mt-4 ml-4 space-y-4 border-l-2 border-border pl-4">
-                    {getReplies(item.comment.id).map((reply) => (
+                    {getReplies(item.comment.id).map((reply: any) => (
                       <div key={reply.comment.id} className="flex gap-3">
                         <Avatar className="w-8 h-8">
                           <AvatarImage src={reply.user?.avatar || undefined} />
@@ -207,9 +214,12 @@ function CommentSection({ newsId }: { newsId: number }) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          No hay comentarios aún. ¡Sé el primero en comentar!
-        </div>
+        <EmptyState 
+          type="empty" 
+          title="No hay comentarios aún"
+          description="¡Sé el primero en comentar!"
+          compact
+        />
       )}
     </section>
   );
@@ -219,10 +229,25 @@ export default function NewsDetail() {
   const params = useParams<{ slug: string }>();
   const { isAuthenticated } = useAuth();
   
-  const { data, isLoading } = trpc.news.getBySlug.useQuery(
-    { slug: params.slug || "" },
+  // Usar cached news con soporte offline
+  const { item: cachedNews, isLoading: isLoadingCached } = useCachedNewsBySlug(
+    params.slug,
     { enabled: !!params.slug }
   );
+
+  // También usar tRPC para datos frescos
+  const { data: serverData, isLoading: isLoadingServer } = trpc.news.getBySlug.useQuery(
+    { slug: params.slug || "" },
+    { enabled: !!params.slug && navigator.onLine }
+  );
+
+  // Usar datos del servidor si están disponibles, sino del cache
+  const data = serverData || (cachedNews ? {
+    news: cachedNews,
+    category: cachedNews.category
+  } : null);
+  
+  const isLoading = isLoadingCached && isLoadingServer;
 
   const { data: isFavorited } = trpc.favorites.news.check.useQuery(
     { newsId: data?.news.id || 0 },
@@ -235,8 +260,15 @@ export default function NewsDetail() {
   const toggleFavorite = trpc.favorites.news.toggle.useMutation({
     onSuccess: (result) => {
       utils.favorites.news.check.invalidate({ newsId: data?.news.id });
-      toast.success(result.isFavorited ? "Añadido a favoritos" : "Eliminado de favoritos");
+      if (result.isFavorited) {
+        toast.success("Añadido a favoritos", { description: data?.news.title });
+      } else {
+        toast.success("Eliminado de favoritos");
+      }
     },
+    onError: () => {
+      toast.error("No se pudo actualizar favoritos");
+    }
   });
 
   useEffect(() => {
@@ -254,6 +286,7 @@ export default function NewsDetail() {
         title: data?.news.title,
         url: window.location.href,
       });
+      toast.success("Compartido exitosamente");
     } catch {
       await navigator.clipboard.writeText(window.location.href);
       toast.success("Enlace copiado al portapapeles");
@@ -263,16 +296,8 @@ export default function NewsDetail() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-8">
-          <Skeleton className="h-8 w-32 mb-8" />
-          <Skeleton className="h-[400px] w-full rounded-xl mb-8" />
-          <Skeleton className="h-12 w-3/4 mb-4" />
-          <Skeleton className="h-6 w-1/2 mb-8" />
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
+        <div className="container py-8 max-w-4xl">
+          <DetailSkeleton variant="news" />
         </div>
       </Layout>
     );
@@ -281,11 +306,17 @@ export default function NewsDetail() {
   if (!data) {
     return (
       <Layout>
-        <div className="container py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Noticia no encontrada</h1>
-          <Link href="/">
-            <Button>Volver al inicio</Button>
-          </Link>
+        <div className="container py-8">
+          <EmptyState 
+            type="notFound" 
+            title="Noticia no encontrada"
+            description="El contenido que buscas no existe o ha sido eliminado"
+            action={
+              <Link href="/">
+                <Button>Volver al inicio</Button>
+              </Link>
+            }
+          />
         </div>
       </Layout>
     );
@@ -304,16 +335,19 @@ export default function NewsDetail() {
           </Button>
         </Link>
 
-        {/* Hero image */}
+        {/* Hero image con OptimizedImage */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative h-[300px] md:h-[400px] rounded-xl overflow-hidden mb-8"
         >
-          <img
+          <OptimizedImage
             src={news.imageUrl || "/stadium-bg.jpg"}
             alt={news.title}
-            className="w-full h-full object-cover"
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           {category && (

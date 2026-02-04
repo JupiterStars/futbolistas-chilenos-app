@@ -1,13 +1,19 @@
+/**
+ * Transfers.tsx - Mercado de fichajes integrado
+ * Features: OptimizedImage, ListSkeleton, EmptyState
+ */
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { ListSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
 import {
   ArrowRightLeft,
   CheckCircle,
@@ -69,9 +75,15 @@ function TransferCard({ transfer }: { transfer: any }) {
       <div className="flex items-center gap-4">
         {/* From Team */}
         <div className="flex-1 text-center">
-          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center overflow-hidden">
             {fromTeam?.logo ? (
-              <img src={fromTeam.logo} alt={fromTeam.name} className="w-12 h-12 object-contain" />
+              <OptimizedImage
+                src={fromTeam.logo}
+                alt={fromTeam.name}
+                width={48}
+                height={48}
+                className="object-contain"
+              />
             ) : (
               <span className="text-2xl font-bold text-muted-foreground">
                 {fromTeam?.shortName?.charAt(0) || "?"}
@@ -111,9 +123,15 @@ function TransferCard({ transfer }: { transfer: any }) {
 
         {/* To Team */}
         <div className="flex-1 text-center">
-          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-muted flex items-center justify-center overflow-hidden">
             {toTeam?.logo ? (
-              <img src={toTeam.logo} alt={toTeam.name} className="w-12 h-12 object-contain" />
+              <OptimizedImage
+                src={toTeam.logo}
+                alt={toTeam.name}
+                width={48}
+                height={48}
+                className="object-contain"
+              />
             ) : (
               <span className="text-2xl font-bold text-muted-foreground">
                 {toTeam?.shortName?.charAt(0) || "?"}
@@ -210,7 +228,7 @@ export default function Transfers() {
             {loading ? (
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                  <ListSkeleton key={i} items={1} showAvatar showBadge />
                 ))}
               </div>
             ) : transfers && transfers.length > 0 ? (
@@ -227,14 +245,11 @@ export default function Transfers() {
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    No hay fichajes disponibles
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                type="empty"
+                title="No hay fichajes disponibles"
+                description="Aún no hay movimientos en el mercado de fichajes"
+              />
             )}
           </TabsContent>
         </Tabs>

@@ -7,6 +7,15 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import {
+  corsMiddleware,
+  rateLimitMiddleware,
+  helmetMiddleware,
+  compressionMiddleware,
+  requestLogger,
+  errorHandler,
+  notFoundHandler,
+} from "../middleware/security";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,9 +46,18 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 const app = express();
 
+// Security middleware
+app.use(helmetMiddleware());
+app.use(corsMiddleware());
+app.use(rateLimitMiddleware());
+app.use(requestLogger());
+
 // Configure body parser with larger size limit for file uploads
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Compression middleware
+app.use(compressionMiddleware());
 
 // OAuth callback under /api/oauth/callback
 registerOAuthRoutes(app);
@@ -52,6 +70,12 @@ app.use(
     createContext,
   })
 );
+
+// Not found handler
+app.use(notFoundHandler());
+
+// Error handler (debe ir al final)
+app.use(errorHandler());
 
 // Export app for serverless (Vercel/AWS Lambda/etc)
 export default app;

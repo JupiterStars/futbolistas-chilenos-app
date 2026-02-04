@@ -1,13 +1,19 @@
+/**
+ * Leaderboards.tsx - Rankings de jugadores integrado
+ * Features: ListSkeleton, EmptyState, OptimizedImage
+ */
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { ListSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
 import { Trophy, Target, Users, Star, Medal } from "lucide-react";
 
 function LeaderboardRow({ 
@@ -220,11 +226,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingScorers ? (
-                  <div className="space-y-4">
-                    {[...Array(10)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
+                  <ListSkeleton items={10} showAvatar showBadge />
                 ) : topScorers && topScorers.length > 0 ? (
                   <>
                     <TopThreePodium data={topScorers} valueKey="goals" label="goles" />
@@ -242,9 +244,11 @@ export default function Leaderboards() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No hay datos disponibles
-                  </p>
+                  <EmptyState 
+                    type="players" 
+                    title="No hay datos disponibles"
+                    description="Aún no hay estadísticas de goleadores"
+                  />
                 )}
               </CardContent>
             </Card>
@@ -261,11 +265,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingAssisters ? (
-                  <div className="space-y-4">
-                    {[...Array(10)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
+                  <ListSkeleton items={10} showAvatar showBadge />
                 ) : topAssisters && topAssisters.length > 0 ? (
                   <>
                     <TopThreePodium data={topAssisters} valueKey="assists" label="asistencias" />
@@ -283,9 +283,11 @@ export default function Leaderboards() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No hay datos disponibles
-                  </p>
+                  <EmptyState 
+                    type="players" 
+                    title="No hay datos disponibles"
+                    description="Aún no hay estadísticas de asistentes"
+                  />
                 )}
               </CardContent>
             </Card>
@@ -302,11 +304,7 @@ export default function Leaderboards() {
               </CardHeader>
               <CardContent>
                 {loadingRated ? (
-                  <div className="space-y-4">
-                    {[...Array(10)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
+                  <ListSkeleton items={10} showAvatar showBadge />
                 ) : topRated && topRated.length > 0 ? (
                   <>
                     <TopThreePodium 
@@ -334,9 +332,11 @@ export default function Leaderboards() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No hay datos disponibles
-                  </p>
+                  <EmptyState 
+                    type="players" 
+                    title="No hay datos disponibles"
+                    description="Aún no hay ratings de jugadores"
+                  />
                 )}
               </CardContent>
             </Card>

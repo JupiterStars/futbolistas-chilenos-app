@@ -1,3 +1,8 @@
+/**
+ * Profile.tsx - Perfil de usuario integrado
+ * Features: OptimizedImage, LoadingOverlay, toast
+ */
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -5,10 +10,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { EmptyState } from "@/components/EmptyState";
+import { toast } from "@/lib/toast";
 import { getLoginUrl } from "@/const";
 import {
   User,
@@ -20,13 +28,13 @@ import {
   History,
   LogIn,
   LogOut,
-  Settings,
   Crown,
 } from "lucide-react";
 
 export default function Profile() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { data: history, isLoading: loadingHistory } = trpc.history.list.useQuery(
     { limit: 10 },
@@ -43,15 +51,28 @@ export default function Profile() {
     { enabled: isAuthenticated }
   );
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      toast.success("Sesión cerrada correctamente");
+      navigate("/");
+    } catch (error) {
+      toast.error("Error al cerrar sesión");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <Layout>
         <div className="container py-8 max-w-4xl">
           <div className="flex items-center gap-6 mb-8">
-            <Skeleton className="w-24 h-24 rounded-full" />
+            <div className="w-24 h-24 bg-muted rounded-full animate-pulse" />
             <div className="space-y-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-32" />
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-32 bg-muted rounded animate-pulse" />
             </div>
           </div>
         </div>
@@ -63,19 +84,19 @@ export default function Profile() {
     return (
       <Layout>
         <div className="container py-16 text-center">
-          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
-            <User className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold mb-4">Inicia sesión para ver tu perfil</h1>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            Accede a tu cuenta para ver tu historial de lectura y gestionar tus favoritos
-          </p>
-          <Button asChild size="lg">
-            <a href={getLoginUrl()}>
-              <LogIn className="w-4 h-4 mr-2" />
-              Iniciar Sesión
-            </a>
-          </Button>
+          <EmptyState
+            type="empty"
+            title="Inicia sesión para ver tu perfil"
+            description="Accede a tu cuenta para ver tu historial de lectura y gestionar tus favoritos"
+            action={
+              <Button asChild size="lg">
+                <a href={getLoginUrl()}>
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Iniciar Sesión
+                </a>
+              </Button>
+            }
+          />
         </div>
       </Layout>
     );
@@ -83,7 +104,9 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="container py-8 max-w-4xl">
+      <div className="container py-8 max-w-4xl relative">
+        <LoadingOverlay isLoading={isLoggingOut} message="Cerrando sesión..." />
+        
         {/* Profile header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -130,10 +153,8 @@ export default function Profile() {
               <Button
                 variant="outline"
                 className="text-destructive hover:text-destructive"
-                onClick={() => {
-                  logout();
-                  navigate("/");
-                }}
+                onClick={handleLogout}
+                disabled={isLoggingOut}
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Cerrar Sesión
@@ -214,7 +235,7 @@ export default function Profile() {
               {loadingHistory ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                    <div key={i} className="h-16 w-full bg-muted rounded animate-pulse" />
                   ))}
                 </div>
               ) : history && history.length > 0 ? (
@@ -228,10 +249,12 @@ export default function Profile() {
                     >
                       <Link href={`/news/${item.news?.slug}`}>
                         <div className="flex gap-4 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                          <img
+                          <OptimizedImage
                             src={item.news?.imageUrl || "/chile-team-1.jpg"}
-                            alt={item.news?.title}
-                            className="w-20 h-14 object-cover rounded"
+                            alt={item.news?.title || "Noticia"}
+                            width={80}
+                            height={56}
+                            className="object-cover rounded"
                           />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium line-clamp-1 hover:text-primary transition-colors">
@@ -256,15 +279,17 @@ export default function Profile() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <History className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">
-                    No has leído ninguna noticia aún
-                  </p>
-                  <Button asChild variant="outline">
-                    <Link href="/">Explorar noticias</Link>
-                  </Button>
-                </div>
+                <EmptyState
+                  type="empty"
+                  title="No has leído ninguna noticia aún"
+                  description="Tu historial de lectura aparecerá aquí"
+                  action={
+                    <Button asChild variant="outline">
+                      <Link href="/">Explorar noticias</Link>
+                    </Button>
+                  }
+                  compact
+                />
               )}
             </CardContent>
           </Card>

@@ -1,3 +1,7 @@
+/**
+ * Home.tsx - Página principal integrada
+ * Features: OptimizedImage, GridSkeleton, NewsCardSkeleton, useCachedNews
+ */
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5,7 +9,9 @@ import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { GridSkeleton } from "@/components/skeletons";
+import { useCachedNews } from "@/hooks/useCachedNews";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,17 +23,17 @@ import {
   Heart,
 } from "lucide-react";
 
-// Category colors mapping - Improved to match reference images
+// Category colors mapping
 const categoryColors: Record<string, string> = {
-  "la-roja": "bg-[#E30613]",           // Rojo Chile
-  "extranjero": "bg-[#FFA500]",        // Naranja/Amber brillante
-  "u20": "bg-[#E30613]",               // Rojo Chile
-  "u18": "bg-[#8B5CF6]",               // Púrpura
-  "u17": "bg-[#3B82F6]",               // Azul
-  "u16": "bg-[#EC4899]",               // Rosa/Fucsia
-  "u15": "bg-[#6366F1]",               // Índigo
-  "entrevistas": "bg-[#14B8A6]",       // Teal
-  "mercado": "bg-[#F97316]",           // Naranja fuerte
+  "la-roja": "bg-[#E30613]",
+  "extranjero": "bg-[#FFA500]",
+  "u20": "bg-[#E30613]",
+  "u18": "bg-[#8B5CF6]",
+  "u17": "bg-[#3B82F6]",
+  "u16": "bg-[#EC4899]",
+  "u15": "bg-[#6366F1]",
+  "entrevistas": "bg-[#14B8A6]",
+  "mercado": "bg-[#F97316]",
 };
 
 const categoryNames: Record<string, string> = {
@@ -42,10 +48,24 @@ const categoryNames: Record<string, string> = {
   "mercado": "MERCADO",
 };
 
-// Hero Carousel Component
+// Hero Carousel Component con OptimizedImage
 function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { data: featuredNews, isLoading } = trpc.news.featured.useQuery({ limit: 5 });
+  const { data: newsList, isLoading } = useCachedNews({ limit: 5 });
+  
+  // Mapear los datos de cached news al formato esperado
+  const featuredNews = newsList?.slice(0, 5).map((item: any) => ({
+    news: {
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      excerpt: item.excerpt,
+      imageUrl: item.imageUrl,
+      publishedAt: item.publishedAt,
+      views: item.views,
+    },
+    category: item.category
+  }));
 
   useEffect(() => {
     if (!featuredNews?.length) return;
@@ -70,7 +90,7 @@ function HeroCarousel() {
   if (isLoading) {
     return (
       <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden">
-        <Skeleton className="w-full h-full" />
+        <GridSkeleton columns={1} items={1} itemHeight="lg" showImage className="h-full" />
       </div>
     );
   }
@@ -115,14 +135,17 @@ function HeroCarousel() {
           transition={{ duration: 0.5 }}
           className="absolute inset-0"
         >
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ 
-              backgroundImage: `url(${currentNews.news.imageUrl || '/stadium-bg.jpg'})` 
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          </div>
+          {/* OptimizedImage para el hero - con priority */}
+          <OptimizedImage
+            src={currentNews.news.imageUrl || '/stadium-bg.jpg'}
+            alt={currentNews.news.title}
+            fill
+            priority={currentSlide === 0}
+            className="absolute inset-0"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+          
           <div className="absolute inset-0 flex items-end p-6 md:p-10">
             <div className="max-w-2xl">
               <Badge className={`mb-3 ${categoryColor} hover:${categoryColor} text-white border-0 font-medium text-xs`}>
@@ -203,7 +226,8 @@ function HeroCarousel() {
 
 // Trending Bar Component
 function TrendingBar() {
-  const { data: trendingNews, isLoading } = trpc.news.list.useQuery({ limit: 5 });
+  const { data: newsList, isLoading } = useCachedNews({ limit: 5 });
+  const trendingNews = newsList?.slice(0, 5);
 
   if (isLoading || !trendingNews?.length) return null;
 
@@ -214,15 +238,15 @@ function TrendingBar() {
       </Badge>
       <div className="flex-1 overflow-x-auto scrollbar-hide">
         <div className="flex gap-6">
-          {trendingNews.map((item, index) => (
+          {trendingNews.map((item: any, index: number) => (
             <Link 
-              key={`${item.news.id}-${index}`} 
-              href={`/news/${item.news.slug}`}
+              key={`${item.id}-${index}`} 
+              href={`/news/${item.slug}`}
               className="flex items-center gap-2 shrink-0 hover:text-[#E30613] transition-colors group"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#E30613] shrink-0 group-hover:scale-125 transition-transform" />
               <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[200px] md:max-w-[300px] whitespace-nowrap">
-                {item.news.title}
+                {item.title}
               </span>
             </Link>
           ))}
@@ -232,7 +256,7 @@ function TrendingBar() {
   );
 }
 
-// News Card Component
+// News Card Component con OptimizedImage
 function NewsCard({ news, category, index = 0 }: { 
   news: any; 
   category: any;
@@ -242,7 +266,6 @@ function NewsCard({ news, category, index = 0 }: {
   const categoryColor = categoryColors[categorySlug] || "bg-[#E30613]";
   const categoryName = category?.name || categoryNames[categorySlug] || "NOTICIAS";
 
-  // Format relative time
   const getRelativeTime = (date: string) => {
     const now = new Date();
     const published = new Date(date);
@@ -262,12 +285,14 @@ function NewsCard({ news, category, index = 0 }: {
     >
       <Link href={`/news/${news.slug}`}>
         <article className="group bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5 hover:border-[#E30613]/30 dark:hover:border-[#E30613]/30 transition-all duration-300 hover:shadow-lg hover:shadow-[#E30613]/5">
-          {/* Image Container */}
+          {/* Image Container con OptimizedImage */}
           <div className="relative h-44 overflow-hidden bg-gray-100 dark:bg-white/5">
-            <img
+            <OptimizedImage
               src={news.imageUrl || "/chile-team-1.jpg"}
               alt={news.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              fill
+              className="group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
             {/* Category Badge */}
             <Badge className={`absolute top-3 left-3 ${categoryColor} text-white border-0 text-[10px] font-bold tracking-wider px-2 py-0.5`}>
@@ -348,12 +373,12 @@ function CategoryTabs({
   );
 }
 
-// News Grid Section
+// News Grid Section con GridSkeleton
 function NewsGrid() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const { data: categories } = trpc.categories.list.useQuery();
-  const { data: newsList, isLoading } = trpc.news.list.useQuery({
-    categoryId: activeCategory !== "all" ? parseInt(activeCategory) : undefined,
+  const { data: newsList, isLoading } = useCachedNews({
+    categoryId: activeCategory !== "all" ? activeCategory : undefined,
     limit: 8,
   });
 
@@ -368,7 +393,7 @@ function NewsGrid() {
         <Link href="/news">
           <span className="text-sm text-gray-500 hover:text-[#E30613] transition-colors flex items-center gap-1">
             Ver todas
-            <ChevronRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
           </span>
         </Link>
       </div>
@@ -382,26 +407,15 @@ function NewsGrid() {
         />
       </div>
 
-      {/* Grid */}
+      {/* Grid con Skeleton o Contenido */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5">
-              <Skeleton className="h-44 w-full" />
-              <div className="p-4 space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <GridSkeleton columns={4} items={8} itemHeight="md" showImage />
       ) : newsList && newsList.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {newsList.map((item, index) => (
+          {newsList.map((item: any, index: number) => (
             <NewsCard 
-              key={item.news.id} 
-              news={item.news} 
+              key={item.id} 
+              news={item} 
               category={item.category}
               index={index}
             />
@@ -418,8 +432,6 @@ function NewsGrid() {
 
 // Categories Grid Section
 function CategoriesGrid() {
-  const { data: categories } = trpc.categories.list.useQuery();
-
   const categoryLinks = [
     { slug: "la-roja", name: "LA ROJA" },
     { slug: "extranjero", name: "Extranjero" },
@@ -461,7 +473,7 @@ function CategoriesGrid() {
   );
 }
 
-// Support Section - Matching reference home2.png
+// Support Section
 function SupportSection() {
   return (
     <section className="py-6">
@@ -479,12 +491,14 @@ function SupportSection() {
         </p>
         
         {/* White button with red text */}
-        <Button 
-          className="bg-white text-[#E30613] hover:bg-white/90 rounded-full px-8 font-semibold shadow-lg w-full max-w-xs"
-        >
-          <Heart className="w-4 h-4 mr-2 fill-[#E30613]" />
-          Apoyar Ahora
-        </Button>
+        <Link href="/support">
+          <Button 
+            className="bg-white text-[#E30613] hover:bg-white/90 rounded-full px-8 font-semibold shadow-lg w-full max-w-xs"
+          >
+            <Heart className="w-4 h-4 mr-2 fill-[#E30613]" />
+            Apoyar Ahora
+          </Button>
+        </Link>
       </div>
     </section>
   );

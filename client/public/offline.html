@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+  <meta name="theme-color" content="#FF0000">
+  <title>Sin conexión - FCH Noticias</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/logo-192x192.png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --color-primary: #FF0000;
+      --color-primary-dark: #CC0000;
+      --color-bg: #0a0a0a;
+      --color-surface: #1a1a1a;
+      --color-surface-hover: #2a2a2a;
+      --color-text: #ffffff;
+      --color-text-secondary: #a0a0a0;
+      --color-border: #333333;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(255, 0, 0, 0.3);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+    
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    .logo-text {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Main Content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    /* Offline Icon */
+    .offline-icon {
+      width: 120px;
+      height: 120px;
+      background: var(--color-surface);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2rem;
+      border: 3px solid var(--color-border);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }
+      50% { box-shadow: 0 0 0 20px rgba(255, 0, 0, 0); }
+    }
+    
+    .offline-icon svg {
+      width: 60px;
+      height: 60px;
+      color: var(--color-primary);
+    }
+    
+    /* Title */
+    .title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .subtitle {
+      color: var(--color-text-secondary);
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    
+    /* Cached News Section */
+    .cached-section {
+      width: 100%;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border: 1px solid var(--color-border);
+    }
+    
+    .cached-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .cached-header svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-primary);
+    }
+    
+    .cached-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .cached-list {
+      list-style: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .cached-item {
+      padding: 0.875rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .cached-item:last-child {
+      border-bottom: none;
+    }
+    
+    .cached-item:hover {
+      background: var(--color-surface-hover);
+    }
+    
+    .cached-item-title {
+      font-weight: 500;
+      font-size: 0.9375rem;
+      margin-bottom: 0.25rem;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .cached-item-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--color-text-secondary);
+    }
+    
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.75rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      text-decoration: none;
+    }
+    
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--color-primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+    }
+    
+    .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--color-surface-hover);
+      border-color: var(--color-primary);
+    }
+    
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    /* Footer */
+    .footer {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      border-top: 1px solid var(--color-border);
+    }
+    
+    /* Connection Status */
+    .status-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 0.5rem;
+      background: var(--color-primary);
+      color: white;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .status-bar.online {
+      background: #22c55e;
+      transform: translateY(0);
+    }
+    
+    .status-bar.offline {
+      background: #ef4444;
+      transform: translateY(0);
+    }
+    
+    /* Responsive */
+    @media (max-width: 480px) {
+      .title {
+        font-size: 1.5rem;
+      }
+      
+      .offline-icon {
+        width: 100px;
+        height: 100px;
+      }
+      
+      .offline-icon svg {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--color-bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-primary);
+    }
+  </style>
+</head>
+<body>
+  <!-- Connection Status Bar -->
+  <div id="statusBar" class="status-bar">Sin conexión a internet</div>
+  
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <img src="/logo-192x192.png" alt="FCH Noticias">
+      <span class="logo-text">FCH Noticias</span>
+    </a>
+  </header>
+  
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Offline Icon -->
+    <div class="offline-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+      </svg>
+    </div>
+    
+    <!-- Title -->
+    <h1 class="title">¡Estás offline!</h1>
+    <p class="subtitle">
+      Parece que no tienes conexión a internet en este momento.<br>
+      Algunas noticias previamente cargadas siguen disponibles.
+    </p>
+    
+    <!-- Cached News -->
+    <div class="cached-section">
+      <div class="cached-header">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <span class="cached-title">Noticias disponibles offline</span>
+      </div>
+      <ul id="cachedNewsList" class="cached-list">
+        <li class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <p>Cargando noticias cacheadas...</p>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="location.reload()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Reintentar conexión
+      </button>
+      <a href="/" class="btn btn-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        Ir al inicio
+      </a>
+    </div>
+  </main>
+  
+  <!-- Footer -->
+  <footer class="footer">
+    <p>FCH Noticias - Tu fuente de noticias del fútbol chileno</p>
+  </footer>
+  
+  <script>
+    // Check connection status
+    const statusBar = document.getElementById('statusBar');
+    
+    function updateOnlineStatus() {
+      if (navigator.onLine) {
+        statusBar.textContent = '¡Conexión restaurada!';
+        statusBar.className = 'status-bar online';
+        setTimeout(() => {
+          statusBar.style.transform = 'translateY(-100%)';
+        }, 3000);
+      } else {
+        statusBar.textContent = 'Sin conexión a internet';
+        statusBar.className = 'status-bar offline';
+      }
+    }
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // Initial check
+    if (!navigator.onLine) {
+      statusBar.className = 'status-bar offline';
+    }
+    
+    // Load cached news from API cache
+    async function loadCachedNews() {
+      const listElement = document.getElementById('cachedNewsList');
+      
+      try {
+        // Try to get cached API responses
+        const cache = await caches.open('api-cache-v1');
+        const keys = await cache.keys();
+        
+        const newsItems = [];
+        
+        for (const request of keys) {
+          // Filter for news-related API calls
+          if (request.url.includes('/api/trpc/') && 
+              (request.url.includes('news') || request.url.includes('noticias'))) {
+            try {
+              const response = await cache.match(request);
+              if (response) {
+                const data = await response.json();
+                // Extract news from tRPC response structure
+                if (data.result?.data?.json) {
+                  const items = Array.isArray(data.result.data.json) 
+                    ? data.result.data.json 
+                    : [data.result.data.json];
+                  
+                  items.forEach(item => {
+                    if (item.id && item.title) {
+                      newsItems.push({
+                        id: item.id,
+                        title: item.title,
+                        slug: item.slug || item.id,
+                        category: item.category || 'Noticias',
+                        date: item.publishedAt || item.createdAt,
+                      });
+                    }
+                  });
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing cached item:', e);
+            }
+          }
+        }
+        
+        // Remove duplicates and sort by date
+        const uniqueNews = Array.from(new Map(newsItems.map(n => [n.id, n])).values())
+          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+          .slice(0, 10); // Show max 10
+        
+        if (uniqueNews.length > 0) {
+          listElement.innerHTML = uniqueNews.map(news => `
+            <li class="cached-item" onclick="window.location.href='/news/${news.slug}'">
+              <div class="cached-item-title">${escapeHtml(news.title)}</div>
+              <div class="cached-item-meta">${escapeHtml(news.category)} ${news.date ? '• ' + formatDate(news.date) : ''}</div>
+            </li>
+          `).join('');
+        } else {
+          listElement.innerHTML = `
+            <li class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <p>No hay noticias cacheadas disponibles</p>
+              <p style="font-size: 0.8rem; margin-top: 0.5rem;">Navega por el sitio para guardar noticias offline</p>
+            </li>
+          `;
+        }
+      } catch (error) {
+        console.error('Error loading cached news:', error);
+        listElement.innerHTML = `
+          <li class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p>Error al cargar noticias cacheadas</p>
+          </li>
+        `;
+      }
+    }
+    
+    // Utility functions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatDate(dateString) {
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-CL', { 
+          day: 'numeric', 
+          month: 'short',
+          year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      } catch {
+        return '';
+      }
+    }
+    
+    // Load cached news on page load
+    loadCachedNews();
+  </script>
+</body>
+</html>

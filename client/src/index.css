@@ -262,3 +262,140 @@
 ::selection {
   @apply bg-primary/30 text-foreground;
 }
+
+/* ============================================================
+ * Image Optimization Styles
+ * FCH Noticias - OptimizedImage Component Styles
+ * ============================================================ */
+
+/* Image placeholder animations */
+@keyframes image-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Shimmer effect for image placeholders */
+.image-placeholder-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted) / 0.5) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: image-shimmer 1.5s infinite;
+}
+
+/* Smooth image fade-in */
+.image-fade-in {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.image-fade-in.loaded {
+  opacity: 1;
+}
+
+/* Aspect ratio container for images */
+.image-aspect-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.image-aspect-container > img,
+.image-aspect-container > picture > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Blur placeholder effect */
+.image-blur-placeholder {
+  filter: blur(20px);
+  transform: scale(1.1);
+  transition: filter 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.image-blur-placeholder.loaded {
+  filter: blur(0);
+  transform: scale(1);
+}
+
+/* Error state styling */
+.image-error {
+  @apply bg-muted/50 flex items-center justify-center;
+  min-height: 100px;
+}
+
+.image-error-icon {
+  @apply text-muted-foreground/50;
+  width: 24px;
+  height: 24px;
+}
+
+/* Skeleton pulse animation override for images */
+[data-slot="skeleton"].image-skeleton {
+  @apply rounded-none;
+}
+
+/* Lazy loaded image states */
+.image-lazy {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.image-lazy.in-viewport {
+  opacity: 1;
+}
+
+/* Responsive image container */
+.image-responsive {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Cover image utility */
+.image-cover {
+  object-fit: cover;
+}
+
+/* Contain image utility */
+.image-contain {
+  object-fit: contain;
+}
+
+/* Center image utility */
+.image-center {
+  object-position: center;
+}
+
+/* Top image utility */
+.image-top {
+  object-position: top;
+}
+
+/* Prevent layout shift during load */
+.image-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.image-wrapper > * {
+  position: absolute;
+  inset: 0;
+}
+
+/* Print styles - hide lazy loaded images that haven't loaded */
+@media print {
+  .image-lazy:not(.loaded) {
+    display: none;
+  }
+}

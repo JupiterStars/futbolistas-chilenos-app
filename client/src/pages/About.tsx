@@ -1,8 +1,13 @@
+/**
+ * About.tsx - Página Sobre Nosotros integrada
+ * Features: OptimizedImage
+ */
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import {
   Target,
   Eye,
@@ -97,10 +102,13 @@ export default function About() {
           className="text-center mb-12"
         >
           <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-6 shadow-lg">
-            <img 
-              src="/logo.jpg" 
-              alt="FCH Noticias" 
-              className="w-full h-full object-cover"
+            <OptimizedImage
+              src="/logo.jpg"
+              alt="FCH Noticias"
+              width={80}
+              height={80}
+              className="object-cover"
+              priority
             />
           </div>
           <h1 className="font-heading text-3xl md:text-4xl font-bold mb-4">

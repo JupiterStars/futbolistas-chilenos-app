@@ -1,12 +1,19 @@
-import { useState } from "react";
+/**
+ * Players.tsx - Página de jugadores integrada
+ * Features: OptimizedImage, GridSkeleton, PlayerCardSkeleton, InfiniteScroll
+ */
+import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { GridSkeleton, PlayerCardSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
+import { InfiniteScroll } from "@/components/InfiniteScroll";
 import {
   Select,
   SelectContent,
@@ -31,6 +38,7 @@ const sortOptions = [
   { value: "name", label: "Nombre A-Z" },
 ];
 
+// Player Card con OptimizedImage
 function PlayerCard({ player, team }: { player: any; team: any }) {
   return (
     <Link href={`/players/${player.slug}`}>
@@ -39,10 +47,12 @@ function PlayerCard({ player, team }: { player: any; team: any }) {
         className="group bg-card rounded-xl overflow-hidden border border-border card-hover"
       >
         <div className="aspect-[3/4] relative">
-          <img
+          <OptimizedImage
             src={player.imageUrl || "/player-profile.jpg"}
             alt={player.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           
@@ -96,16 +106,30 @@ export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
   const [position, setPosition] = useState("all");
   const [sortBy, setSortBy] = useState<"rating" | "goals" | "assists" | "name">("rating");
+  const [page, setPage] = useState(1);
+  const limit = 16;
 
-  const { data: players, isLoading } = trpc.players.list.useQuery({
+  const { data: allPlayers, isLoading } = trpc.players.list.useQuery({
     position: position !== "all" ? position : undefined,
     orderBy: sortBy,
-    limit: 50,
+    limit: 100,
   });
 
-  const filteredPlayers = players?.filter(item =>
+  // Filter players by search
+  const filteredPlayers = allPlayers?.filter((item: any) =>
     item.player.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Pagination
+  const totalPages = Math.ceil((filteredPlayers?.length || 0) / limit);
+  const paginatedPlayers = filteredPlayers?.slice((page - 1) * limit, page * limit);
+  const hasMore = page < totalPages;
+
+  const loadMore = useCallback(async () => {
+    if (hasMore && !isLoading) {
+      setPage(p => p + 1);
+    }
+  }, [hasMore, isLoading]);
 
   return (
     <Layout>
@@ -132,11 +156,11 @@ export default function Players() {
             <Input
               placeholder="Buscar jugador..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
               className="pl-10"
             />
           </div>
-          <Select value={position} onValueChange={setPosition}>
+          <Select value={position} onValueChange={(v) => { setPosition(v); setPage(1); }}>
             <SelectTrigger className="w-full md:w-[200px]">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Posición" />
@@ -149,7 +173,7 @@ export default function Players() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+          <Select value={sortBy} onValueChange={(v) => { setSortBy(v as any); setPage(1); }}>
             <SelectTrigger className="w-full md:w-[200px]">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
@@ -163,42 +187,65 @@ export default function Players() {
           </Select>
         </div>
 
-        {/* Players grid */}
+        {/* Players grid con Skeleton o Contenido */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-card rounded-xl overflow-hidden border border-border">
-                <Skeleton className="aspect-[3/4]" />
-                <div className="p-4">
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredPlayers && filteredPlayers.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-          >
-            {filteredPlayers.map((item, index) => (
-              <motion.div
-                key={item.player.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <PlayerCard player={item.player} team={item.team} />
-              </motion.div>
-            ))}
-          </motion.div>
+          <GridSkeleton columns={4} items={8} itemHeight="lg" showImage />
+        ) : paginatedPlayers && paginatedPlayers.length > 0 ? (
+          <InfiniteScroll onLoadMore={loadMore} hasMore={hasMore}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+            >
+              {paginatedPlayers.map((item: any, index: number) => (
+                <motion.div
+                  key={item.player.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <PlayerCard player={item.player} team={item.team} />
+                </motion.div>
+              ))}
+            </motion.div>
+          </InfiniteScroll>
         ) : (
-          <div className="text-center py-12">
-            <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              No se encontraron jugadores
-            </p>
+          <EmptyState
+            type="players"
+            title="No se encontraron jugadores"
+            description={searchQuery 
+              ? "Intenta con otros términos de búsqueda" 
+              : "No hay jugadores disponibles en esta categoría"}
+            action={searchQuery ? (
+              <Button onClick={() => { setSearchQuery(""); setPosition("all"); }}>
+                Limpiar filtros
+              </Button>
+            ) : undefined}
+          />
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </Button>
+            <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Siguiente
+            </Button>
           </div>
         )}
       </div>

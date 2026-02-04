@@ -1,3 +1,8 @@
+/**
+ * Favorites.tsx - Favoritos integrado
+ * Features: OptimizedImage, EmptyState, useOfflineData, toast
+ */
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -5,11 +10,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { EmptyState } from "@/components/EmptyState";
+import { useOfflineData } from "@/hooks/useOfflineData";
+import { toast } from "@/lib/toast";
 import { getLoginUrl } from "@/const";
 import {
   Heart,
@@ -19,11 +26,14 @@ import {
   Eye,
   Trash2,
   LogIn,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 export default function Favorites() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
+  const { isOnline, isSyncing, pendingSyncCount, syncNow } = useOfflineData();
 
   const { data: favoriteNews, isLoading: loadingNews } = trpc.favorites.news.list.useQuery(
     undefined,
@@ -51,14 +61,30 @@ export default function Favorites() {
     },
   });
 
+  // Sincronizar cuando vuelve online
+  useEffect(() => {
+    if (isOnline && pendingSyncCount > 0) {
+      syncNow().then(() => {
+        toast.success("Favoritos sincronizados");
+      });
+    }
+  }, [isOnline, pendingSyncCount, syncNow]);
+
+  // Mostrar toast de estado offline
+  useEffect(() => {
+    if (!isOnline) {
+      toast.warning("Estás offline. Los cambios se sincronizarán cuando vuelvas a conectarte.");
+    }
+  }, [isOnline]);
+
   if (authLoading) {
     return (
       <Layout>
         <div className="container py-8">
-          <Skeleton className="h-12 w-48 mb-8" />
+          <div className="h-12 w-48 bg-muted rounded animate-pulse mb-8" />
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full" />
+              <div key={i} className="h-24 w-full bg-muted rounded animate-pulse" />
             ))}
           </div>
         </div>
@@ -70,19 +96,19 @@ export default function Favorites() {
     return (
       <Layout>
         <div className="container py-16 text-center">
-          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
-            <Heart className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold mb-4">Inicia sesión para ver tus favoritos</h1>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            Guarda tus noticias y jugadores favoritos para acceder a ellos rápidamente
-          </p>
-          <Button asChild size="lg">
-            <a href={getLoginUrl()}>
-              <LogIn className="w-4 h-4 mr-2" />
-              Iniciar Sesión
-            </a>
-          </Button>
+          <EmptyState
+            type="empty"
+            title="Inicia sesión para ver tus favoritos"
+            description="Guarda tus noticias y jugadores favoritos para acceder a ellos rápidamente"
+            action={
+              <Button asChild size="lg">
+                <a href={getLoginUrl()}>
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Iniciar Sesión
+                </a>
+              </Button>
+            }
+          />
         </div>
       </Layout>
     );
@@ -106,6 +132,29 @@ export default function Favorites() {
               </p>
             </div>
           </div>
+          
+          {/* Status indicator */}
+          <div className="flex items-center gap-2 mt-2">
+            {isOnline ? (
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <Wifi className="w-3 h-3" />
+                En línea
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-amber-600">
+                <WifiOff className="w-3 h-3" />
+                Offline
+              </span>
+            )}
+            {pendingSyncCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                • {pendingSyncCount} pendiente{pendingSyncCount !== 1 ? "s" : ""} de sincronizar
+              </span>
+            )}
+            {isSyncing && (
+              <span className="text-xs text-primary">• Sincronizando...</span>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="news">
@@ -125,7 +174,7 @@ export default function Favorites() {
             {loadingNews ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                  <div key={i} className="h-24 w-full bg-muted rounded animate-pulse" />
                 ))}
               </div>
             ) : favoriteNews && favoriteNews.length > 0 ? (
@@ -139,10 +188,12 @@ export default function Favorites() {
                     className="flex gap-4 p-4 rounded-lg bg-card border border-border group"
                   >
                     <Link href={`/news/${item.news?.slug}`} className="flex gap-4 flex-1">
-                      <img
+                      <OptimizedImage
                         src={item.news?.imageUrl || "/chile-team-1.jpg"}
-                        alt={item.news?.title}
-                        className="w-28 h-20 object-cover rounded"
+                        alt={item.news?.title || "Noticia"}
+                        width={112}
+                        height={80}
+                        className="object-cover rounded"
                       />
                       <div className="flex-1 min-w-0">
                         {item.category && (
@@ -177,17 +228,16 @@ export default function Favorites() {
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Newspaper className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">
-                    No tienes noticias guardadas
-                  </p>
+              <EmptyState
+                type="news"
+                title="No tienes noticias guardadas"
+                description="Guarda tus noticias favoritas para acceder a ellas rápidamente"
+                action={
                   <Button asChild variant="outline">
                     <Link href="/">Explorar noticias</Link>
                   </Button>
-                </CardContent>
-              </Card>
+                }
+              />
             )}
           </TabsContent>
 
@@ -196,7 +246,7 @@ export default function Favorites() {
             {loadingPlayers ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                  <div key={i} className="h-24 w-full bg-muted rounded animate-pulse" />
                 ))}
               </div>
             ) : favoritePlayers && favoritePlayers.length > 0 ? (
@@ -247,17 +297,16 @@ export default function Favorites() {
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">
-                    No tienes jugadores guardados
-                  </p>
+              <EmptyState
+                type="players"
+                title="No tienes jugadores guardados"
+                description="Sigue a tus jugadores favoritos para tenerlos siempre a mano"
+                action={
                   <Button asChild variant="outline">
                     <Link href="/players">Explorar jugadores</Link>
                   </Button>
-                </CardContent>
-              </Card>
+                }
+              />
             )}
           </TabsContent>
         </Tabs>

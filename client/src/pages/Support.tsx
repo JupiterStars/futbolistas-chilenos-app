@@ -1,9 +1,14 @@
+/**
+ * Support.tsx - Apoyo al proyecto integrado
+ * Features: toast
+ */
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/lib/toast";
 import {
   Heart,
   Coffee,
@@ -61,8 +66,31 @@ const whySupport = [
 
 export default function Support() {
   const [mounted, setMounted] = useState(false);
+  
   useEffect(() => setMounted(true), []);
+  
+  const handleSupport = (option: string) => {
+    toast.success(`¡Gracias por tu interés en "${option}"!`, {
+      description: "Redirigiendo al proceso de pago..."
+    });
+    // Aquí iría la lógica de redirección al proceso de pago
+  };
+  
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'FCH Noticias',
+        text: 'Apoya FCH Noticias - Tu fuente de noticias del fútbol chileno',
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Enlace copiado al portapapeles");
+    }
+  };
+
   if (!mounted) return <div className="min-h-screen" />;
+  
   return (
     <Layout>
       <div className="container py-6">
@@ -176,6 +204,7 @@ export default function Support() {
                         ))}
                       </ul>
                       <Button 
+                        onClick={() => handleSupport(option.title)}
                         className={`w-full ${option.popular ? 'bg-[#E30613] hover:bg-[#c70510]' : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10'}`}
                       >
                         Elegir
@@ -206,7 +235,7 @@ export default function Support() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Ayúdanos a crecer compartiendo FCH Noticias con tus amigos y familiares hinchas.
                   </p>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleShare}>
                     Compartir
                   </Button>
                 </div>

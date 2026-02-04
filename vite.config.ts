@@ -1,6 +1,8 @@
 import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import compression from "vite-plugin-compression2";
+import { VitePWA } from "vite-plugin-pwa";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
@@ -150,7 +152,299 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// =============================================================================
+// Plugin Configuration
+// =============================================================================
+
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+];
+
+// Agregar compresión solo en producción
+if (process.env.NODE_ENV === "production") {
+  plugins.push(
+    // Gzip + Brotli compression
+    compression({
+      algorithms: ["gzip", "brotliCompress"],
+      exclude: [/\.(br)$/, /\.(gz)$/],
+      deleteOriginalAssets: false,
+      threshold: 1024, // Solo comprimir archivos > 1KB
+    })
+  );
+}
+
+// =============================================================================
+// PWA Configuration - vite-plugin-pwa with Workbox
+// =============================================================================
+
+plugins.push(
+  VitePWA({
+    // Estrategia: generateSW para generar automáticamente el SW
+    strategies: 'generateSW',
+    
+    // Desactivar registro automático (lo hacemos manualmente)
+    registerType: 'prompt',
+    
+    // No inyectar el registro automático
+    injectRegister: null,
+    
+    // Configuración del manifest (ya existe en public/)
+    manifest: false,
+    
+    // Workbox configuration
+    workbox: {
+      // Precaching de archivos estáticos
+      globDirectory: 'dist/',
+      globPatterns: [
+        '**/*.{html,js,css}',
+        '**/*.{png,jpg,jpeg,webp,avif,svg,ico}',
+        '**/*.json',
+      ],
+      
+      // No precachear archivos muy grandes
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+      
+      // Skip waiting para activación inmediata
+      skipWaiting: true,
+      
+      // Tomar control de clientes inmediatamente
+      clientsClaim: true,
+      
+      // Cleanup de cachés antiguas
+      cleanupOutdatedCaches: true,
+      
+      // Source maps solo en desarrollo
+      sourcemap: false,
+      
+      // Offline fallback (navigateFallback en Workbox)
+      navigateFallback: '/offline.html',
+      navigateFallbackDenylist: [/^\/api\//, /^\/__manus__\//],
+      
+      // Runtime caching strategies
+      runtimeCaching: [
+        // =============================================================================
+        // APIs tRPC - NetworkFirst con fallback a caché
+        // =============================================================================
+        {
+          urlPattern: /\/api\/trpc\/.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache-v1',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 24 * 60 * 60, // 24 horas
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+            networkTimeoutSeconds: 3, // Timeout rápido
+          },
+        },
+        
+        // =============================================================================
+        // Imágenes - CacheFirst
+        // =============================================================================
+        {
+          urlPattern: /\.(?:png|jpg|jpeg|webp|avif|gif|svg)$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images-cache-v1',
+            expiration: {
+              maxEntries: 200,
+              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 días
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        
+        // =============================================================================
+        // Google Fonts - CacheFirst con TTL largo
+        // =============================================================================
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-stylesheets-v1',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 365 * 24 * 60 * 60, // 1 año
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-webfonts-v1',
+            expiration: {
+              maxEntries: 30,
+              maxAgeSeconds: 365 * 24 * 60 * 60, // 1 año
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        
+        // =============================================================================
+        // Archivos estáticos del sitio - StaleWhileRevalidate
+        // =============================================================================
+        {
+          urlPattern: /\.(?:js|css)$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-resources-v1',
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 24 * 60 * 60, // 24 horas
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        
+        // =============================================================================
+        // CDN externo - CacheFirst
+        // =============================================================================
+        {
+          urlPattern: /^https:\/\/unpkg\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'unpkg-cache-v1',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 días
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        
+        // =============================================================================
+        // Páginas HTML - NetworkFirst con fallback offline
+        // =============================================================================
+        {
+          urlPattern: /\/[^/]*$/i,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pages-cache-v1',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 24 * 60 * 60, // 24 horas
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+            networkTimeoutSeconds: 2,
+          },
+        },
+      ],
+      
+      // Modo de Workbox
+      mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    },
+    
+    // Deshabilitar en desarrollo (opcional)
+    // disabled: process.env.NODE_ENV === 'development',
+    
+    // Incluir dev options para facilitar testing
+    devOptions: {
+      enabled: false, // Desactivar en dev para evitar conflictos
+      type: 'module',
+    },
+  })
+);
+
+// =============================================================================
+// Manual Chunks Configuration
+// Define cómo se dividen los chunks para optimización
+// Evita dependencias circulares manteniendo react en el chunk principal
+// =============================================================================
+
+const manualChunks = {
+  // Vendor core - React y librerías esenciales (mantiene react en chunk principal)
+  "vendor-core": [
+    "react",
+    "react-dom",
+    "wouter",
+  ],
+  // Data fetching (depende de react, va en chunk separado)
+  "vendor-data": ["@tanstack/react-query", "@trpc/client", "@trpc/react-query", "superjson"],
+  // UI Components - Radix UI
+  "vendor-radix": [
+    "@radix-ui/react-accordion",
+    "@radix-ui/react-alert-dialog",
+    "@radix-ui/react-aspect-ratio",
+    "@radix-ui/react-avatar",
+    "@radix-ui/react-checkbox",
+    "@radix-ui/react-collapsible",
+    "@radix-ui/react-context-menu",
+    "@radix-ui/react-dialog",
+    "@radix-ui/react-dropdown-menu",
+    "@radix-ui/react-hover-card",
+    "@radix-ui/react-label",
+    "@radix-ui/react-menubar",
+    "@radix-ui/react-navigation-menu",
+    "@radix-ui/react-popover",
+    "@radix-ui/react-progress",
+    "@radix-ui/react-radio-group",
+    "@radix-ui/react-scroll-area",
+    "@radix-ui/react-select",
+    "@radix-ui/react-separator",
+    "@radix-ui/react-slider",
+    "@radix-ui/react-slot",
+    "@radix-ui/react-switch",
+    "@radix-ui/react-tabs",
+    "@radix-ui/react-toggle",
+    "@radix-ui/react-toggle-group",
+    "@radix-ui/react-tooltip",
+  ],
+  // Formularios y validación
+  "vendor-forms": [
+    "react-hook-form",
+    "@hookform/resolvers",
+    "zod",
+    "input-otp",
+  ],
+  // UI utilities
+  "vendor-ui": [
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "tailwindcss-animate",
+  ],
+  // Animaciones
+  "vendor-animations": ["framer-motion"],
+  // Iconos
+  "vendor-icons": ["lucide-react"],
+  // Fechas
+  "vendor-dates": ["date-fns"],
+  // Charts
+  "vendor-charts": ["recharts"],
+  // Carousels
+  "vendor-carousel": ["embla-carousel-react"],
+  // Notificaciones
+  "vendor-notifications": ["sonner"],
+  // Temas
+  "vendor-themes": ["next-themes", "vaul"],
+  // Comandos
+  "vendor-cmd": ["cmdk"],
+};
+
+// =============================================================================
+// Vite Config
+// =============================================================================
 
 export default defineConfig({
   plugins,
@@ -167,7 +461,142 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
+    // Optimizaciones de build
+    target: "es2020",
+    minify: "terser",
+    cssMinify: true,
+    sourcemap: false, // Desactivar sourcemaps en producción para reducir tamaño
+    // Configuración de chunks
+    rollupOptions: {
+      output: {
+        // Manual chunks para dividir el bundle
+        manualChunks(id: string) {
+          // Chunk prioritario: React y core (carga primero)
+          if (
+            id.includes("react") ||
+            id.includes("wouter")
+          ) {
+            return "vendor-core";
+          }
+
+          // Data fetching (depende de react)
+          if (
+            id.includes("@tanstack/react-query") ||
+            id.includes("@trpc") ||
+            id.includes("superjson")
+          ) {
+            return "vendor-data";
+          }
+
+          // Radix UI components
+          if (id.includes("@radix-ui/")) {
+            return "vendor-radix";
+          }
+
+          // Formularios
+          if (
+            id.includes("react-hook-form") ||
+            id.includes("@hookform/resolvers") ||
+            id.includes("zod") ||
+            id.includes("input-otp")
+          ) {
+            return "vendor-forms";
+          }
+
+          // UI utilities
+          if (
+            id.includes("class-variance-authority") ||
+            id.includes("clsx") ||
+            id.includes("tailwind-merge") ||
+            id.includes("tailwindcss-animate")
+          ) {
+            return "vendor-ui";
+          }
+
+          // Animaciones
+          if (id.includes("framer-motion")) {
+            return "vendor-animations";
+          }
+
+          // Iconos
+          if (id.includes("lucide-react")) {
+            return "vendor-icons";
+          }
+
+          // Fechas
+          if (id.includes("date-fns")) {
+            return "vendor-dates";
+          }
+
+          // Charts
+          if (id.includes("recharts")) {
+            return "vendor-charts";
+          }
+
+          // Carousels
+          if (id.includes("embla-carousel")) {
+            return "vendor-carousel";
+          }
+
+          // Notificaciones
+          if (id.includes("sonner")) {
+            return "vendor-notifications";
+          }
+
+          // Temas
+          if (id.includes("next-themes") || id.includes("vaul")) {
+            return "vendor-themes";
+          }
+
+          // Comandos
+          if (id.includes("cmdk")) {
+            return "vendor-cmd";
+          }
+
+          // Separar componentes UI de shadcn/ui
+          if (id.includes("/components/ui/")) {
+            return "ui-components";
+          }
+
+          // Separar páginas (lazy loaded)
+          if (id.includes("/pages/")) {
+            return "pages";
+          }
+
+          // Separar hooks
+          if (id.includes("/hooks/")) {
+            return "hooks";
+          }
+
+          // Separar lib
+          if (id.includes("/lib/")) {
+            return "lib";
+          }
+
+          return null;
+        },
+        // Configuración de nombres de archivos
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name || "";
+          if (/\.css$/.test(info)) {
+            return "assets/[name]-[hash][extname]";
+          }
+          if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(info)) {
+            return "assets/images/[name]-[hash][extname]";
+          }
+          if (/\.(woff2?|ttf|otf|eot)$/.test(info)) {
+            return "assets/fonts/[name]-[hash][extname]";
+          }
+          return "assets/[name]-[hash][extname]";
+        },
+      },
+    },
+    // Tamaño de aviso para chunks grandes (en KB)
+    chunkSizeWarningLimit: 500,
   },
+  // Optimizaciones del servidor de desarrollo
   server: {
     host: true,
     allowedHosts: [
@@ -183,5 +612,22 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+  },
+  // Optimizaciones de pre-bundling
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "wouter",
+      "@tanstack/react-query",
+      "@trpc/client",
+      "@trpc/react-query",
+      "framer-motion",
+      "lucide-react",
+      "sonner",
+      "zod",
+      "react-hook-form",
+    ],
+    exclude: ["@builder.io/vite-plugin-jsx-loc"],
   },
 });

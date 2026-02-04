@@ -1,12 +1,21 @@
-import { useState } from "react";
+/**
+ * NewsList.tsx - Listado de noticias integrado
+ * Features: OptimizedImage, GridSkeleton, InfiniteScroll, EmptyState
+ */
+import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { GridSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
+import { InfiniteScroll } from "@/components/InfiniteScroll";
+import { useCachedNews } from "@/hooks/useCachedNews";
+import { toast } from "@/lib/toast";
 import {
   Clock,
   Eye,
@@ -43,7 +52,7 @@ const categoryNames: Record<string, string> = {
   "mercado": "Mercado de Pases",
 };
 
-// News Card Component
+// News Card Component con OptimizedImage
 function NewsCard({ news, category, index = 0 }: { 
   news: any; 
   category: any;
@@ -72,12 +81,14 @@ function NewsCard({ news, category, index = 0 }: {
     >
       <Link href={`/news/${news.slug}`}>
         <article className="group bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5 hover:border-[#E30613]/30 dark:hover:border-[#E30613]/30 transition-all duration-300 hover:shadow-lg hover:shadow-[#E30613]/5">
-          {/* Image Container */}
+          {/* Image Container con OptimizedImage */}
           <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-white/5">
-            <img
+            <OptimizedImage
               src={news.imageUrl || "/chile-team-1.jpg"}
               alt={news.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              fill
+              className="group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
             {/* Category Badge */}
             <Badge className={`absolute top-3 left-3 ${categoryColor} text-white border-0 text-[10px] font-bold tracking-wider px-2 py-0.5`}>
@@ -122,20 +133,27 @@ export default function NewsList() {
   const limit = 12;
 
   const { data: categories } = trpc.categories.list.useQuery();
-  const { data: allNews, isLoading } = trpc.news.list.useQuery({
-    limit: 100,
+  
+  // Usar InfiniteScroll con paginación
+  const { data: allNews, isLoading, error } = trpc.news.list.useQuery({
+    limit: page * limit,
   });
+
+  // Manejar error de red
+  if (error && !isLoading) {
+    toast.error("Error al cargar noticias. Intenta nuevamente.");
+  }
 
   // Filter and search news
   let filteredNews = allNews || [];
   
   if (selectedCategory) {
-    filteredNews = filteredNews.filter(item => item.category?.slug === selectedCategory);
+    filteredNews = filteredNews.filter((item: any) => item.category?.slug === selectedCategory);
   }
   
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
-    filteredNews = filteredNews.filter(item => 
+    filteredNews = filteredNews.filter((item: any) => 
       item.news.title.toLowerCase().includes(query) ||
       item.news.excerpt.toLowerCase().includes(query)
     );
@@ -144,11 +162,19 @@ export default function NewsList() {
   // Pagination
   const totalPages = Math.ceil(filteredNews.length / limit);
   const paginatedNews = filteredNews.slice((page - 1) * limit, page * limit);
+  
+  const hasMore = page < totalPages;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
   };
+
+  const loadMore = useCallback(async () => {
+    if (hasMore && !isLoading) {
+      setPage(p => p + 1);
+    }
+  }, [hasMore, isLoading]);
 
   return (
     <Layout>
@@ -241,24 +267,13 @@ export default function NewsList() {
           </div>
         </motion.div>
 
-        {/* News Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-[#111] rounded-xl overflow-hidden border border-gray-200 dark:border-white/5">
-                <Skeleton className="h-48 w-full" />
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* News Grid con InfiniteScroll */}
+        {isLoading && page === 1 ? (
+          <GridSkeleton columns={4} items={8} itemHeight="md" showImage />
         ) : paginatedNews.length > 0 ? (
-          <>
+          <InfiniteScroll onLoadMore={loadMore} hasMore={hasMore}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {paginatedNews.map((item, index) => (
+              {paginatedNews.map((item: any, index: number) => (
                 <NewsCard 
                   key={item.news.id} 
                   news={item.news} 
@@ -267,48 +282,47 @@ export default function NewsList() {
                 />
               ))}
             </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-8">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Anterior
-                </Button>
-                <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400">
-                  Página {page} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                >
-                  Siguiente
-                </Button>
-              </div>
-            )}
-          </>
+          </InfiniteScroll>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 bg-gray-50 dark:bg-white/5 rounded-2xl"
-          >
-            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="font-heading text-xl font-bold text-gray-900 dark:text-white mb-2">
-              No se encontraron noticias
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              {searchQuery 
-                ? "No hay noticias que coincidan con tu búsqueda. Intenta con otros términos."
-                : "No hay noticias disponibles en esta categoría."}
-            </p>
-          </motion.div>
+          <EmptyState 
+            type="search" 
+            title={searchQuery ? "No se encontraron resultados" : "No hay noticias disponibles"}
+            description={searchQuery 
+              ? "Intenta con otros términos de búsqueda o filtros diferentes" 
+              : "Aún no hay noticias publicadas en esta categoría"}
+            action={
+              searchQuery ? (
+                <Button onClick={() => { setSearchQuery(""); setSelectedCategory(null); }}>
+                  Limpiar filtros
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
+
+        {/* Pagination (fallback si InfiniteScroll no funciona) */}
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </Button>
+            <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Siguiente
+            </Button>
+          </div>
         )}
       </div>
     </Layout>

@@ -1,3 +1,7 @@
+/**
+ * Search.tsx - Búsqueda integrada
+ * Features: OptimizedImage, EmptyState, toast
+ */
 import { useState, useEffect } from "react";
 import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
@@ -5,10 +9,12 @@ import { trpc } from "@/lib/trpc";
 import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { EmptyState } from "@/components/EmptyState";
+import { toast } from "@/lib/toast";
 import {
   Search as SearchIcon,
   Newspaper,
@@ -44,6 +50,13 @@ export default function Search() {
     (results?.players?.length || 0) + 
     (results?.teams?.length || 0);
 
+  // Mostrar toast si hay error de búsqueda
+  useEffect(() => {
+    if (debouncedQuery.length >= 2 && !isLoading && totalResults === 0) {
+      toast.info("No se encontraron resultados para tu búsqueda");
+    }
+  }, [debouncedQuery, isLoading, totalResults]);
+
   return (
     <Layout>
       <div className="container py-8 max-w-4xl">
@@ -73,26 +86,39 @@ export default function Search() {
 
         {/* Results */}
         {debouncedQuery.length < 2 ? (
-          <div className="text-center py-12">
-            <SearchIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              Escribe al menos 2 caracteres para buscar
-            </p>
-          </div>
+          <EmptyState 
+            type="search" 
+            title="Comienza a buscar"
+            description="Escribe al menos 2 caracteres para buscar noticias, jugadores o equipos"
+          />
         ) : isLoading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-lg" />
+              <Card key={i} className="p-4">
+                <div className="flex gap-4">
+                  <div className="w-24 h-16 bg-muted rounded animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </Card>
             ))}
           </div>
         ) : totalResults === 0 ? (
-          <div className="text-center py-12">
-            <SearchIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-xl font-semibold mb-2">Sin resultados</p>
-            <p className="text-muted-foreground">
-              No encontramos nada para "{debouncedQuery}"
-            </p>
-          </div>
+          <EmptyState 
+            type="search" 
+            title="Sin resultados"
+            description={`No encontramos nada para "${debouncedQuery}"`}
+            action={
+              <button 
+                onClick={() => setQuery("")}
+                className="text-primary hover:underline"
+              >
+                Limpiar búsqueda
+              </button>
+            }
+          />
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-6">
@@ -201,10 +227,12 @@ function NewsResult({ item }: { item: any }) {
         whileHover={{ x: 5 }}
         className="flex gap-4 p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer"
       >
-        <img
+        <OptimizedImage
           src={item.news.imageUrl || "/chile-team-1.jpg"}
           alt={item.news.title}
-          className="w-24 h-16 object-cover rounded"
+          width={96}
+          height={64}
+          className="object-cover rounded"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -273,9 +301,15 @@ function TeamResult({ team }: { team: any }) {
       whileHover={{ scale: 1.02 }}
       className="flex items-center gap-4 p-4 rounded-lg bg-card border border-border cursor-pointer"
     >
-      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center overflow-hidden">
         {team.logo ? (
-          <img src={team.logo} alt={team.name} className="w-10 h-10 object-contain" />
+          <OptimizedImage
+            src={team.logo}
+            alt={team.name}
+            width={40}
+            height={40}
+            className="object-contain"
+          />
         ) : (
           <span className="text-xl font-bold text-muted-foreground">
             {team.shortName?.charAt(0) || team.name.charAt(0)}

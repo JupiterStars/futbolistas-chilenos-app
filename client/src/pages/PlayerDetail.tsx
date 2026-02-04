@@ -1,3 +1,7 @@
+/**
+ * PlayerDetail.tsx - Detalle de jugador integrado
+ * Features: OptimizedImage, DetailSkeleton, useCachedPlayerBySlug, toast
+ */
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -5,10 +9,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { DetailSkeleton } from "@/components/skeletons";
+import { EmptyState } from "@/components/EmptyState";
+import { useCachedPlayerBySlug } from "@/hooks/useCachedPlayers";
+import { toast } from "@/lib/toast";
 import {
   ArrowLeft,
   Heart,
@@ -87,10 +94,25 @@ export default function PlayerDetail() {
   const params = useParams<{ slug: string }>();
   const { isAuthenticated } = useAuth();
   
-  const { data, isLoading } = trpc.players.getBySlug.useQuery(
-    { slug: params.slug || "" },
+  // Usar cached player con soporte offline
+  const { item: cachedPlayer, isLoading: isLoadingCached } = useCachedPlayerBySlug(
+    params.slug,
     { enabled: !!params.slug }
   );
+
+  // También usar tRPC para datos frescos
+  const { data: serverData, isLoading: isLoadingServer } = trpc.players.getBySlug.useQuery(
+    { slug: params.slug || "" },
+    { enabled: !!params.slug && navigator.onLine }
+  );
+
+  // Usar datos del servidor si están disponibles, sino del cache
+  const data = serverData || (cachedPlayer ? {
+    player: cachedPlayer,
+    team: cachedPlayer.team
+  } : null);
+  
+  const isLoading = isLoadingCached && isLoadingServer;
 
   const { data: playerNews } = trpc.players.getNews.useQuery(
     { playerId: data?.player.id || 0, limit: 5 },
@@ -106,8 +128,15 @@ export default function PlayerDetail() {
   const toggleFavorite = trpc.favorites.players.toggle.useMutation({
     onSuccess: (result) => {
       utils.favorites.players.check.invalidate({ playerId: data?.player.id });
-      toast.success(result.isFavorited ? "Añadido a favoritos" : "Eliminado de favoritos");
+      if (result.isFavorited) {
+        toast.success("Jugador añadido a favoritos");
+      } else {
+        toast.success("Jugador eliminado de favoritos");
+      }
     },
+    onError: () => {
+      toast.error("No se pudo actualizar favoritos");
+    }
   });
 
   const handleShare = async () => {
@@ -116,6 +145,7 @@ export default function PlayerDetail() {
         title: data?.player.name,
         url: window.location.href,
       });
+      toast.success("Compartido exitosamente");
     } catch {
       await navigator.clipboard.writeText(window.location.href);
       toast.success("Enlace copiado al portapapeles");
@@ -126,15 +156,7 @@ export default function PlayerDetail() {
     return (
       <Layout>
         <div className="container py-8">
-          <Skeleton className="h-8 w-32 mb-8" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Skeleton className="h-[500px] rounded-xl" />
-            <div className="lg:col-span-2 space-y-4">
-              <Skeleton className="h-12 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-[300px] rounded-xl" />
-            </div>
-          </div>
+          <DetailSkeleton variant="player" />
         </div>
       </Layout>
     );
@@ -143,11 +165,17 @@ export default function PlayerDetail() {
   if (!data) {
     return (
       <Layout>
-        <div className="container py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Jugador no encontrado</h1>
-          <Link href="/players">
-            <Button>Ver todos los jugadores</Button>
-          </Link>
+        <div className="container py-8">
+          <EmptyState 
+            type="notFound" 
+            title="Jugador no encontrado"
+            description="El jugador que buscas no existe o ha sido eliminado"
+            action={
+              <Link href="/players">
+                <Button>Ver todos los jugadores</Button>
+              </Link>
+            }
+          />
         </div>
       </Layout>
     );
@@ -176,10 +204,13 @@ export default function PlayerDetail() {
             <div className="sticky top-24">
               <Card className="overflow-hidden">
                 <div className="aspect-[3/4] relative">
-                  <img
+                  <OptimizedImage
                     src={player.imageUrl || "/player-profile.jpg"}
                     alt={player.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    priority
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 33vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   
@@ -377,10 +408,12 @@ export default function PlayerDetail() {
                         {playerNews.map((item) => (
                           <Link key={item.news.id} href={`/news/${item.news.slug}`}>
                             <div className="flex gap-4 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                              <img
+                              <OptimizedImage
                                 src={item.news.imageUrl || "/chile-team-1.jpg"}
                                 alt={item.news.title}
-                                className="w-24 h-16 object-cover rounded"
+                                width={96}
+                                height={64}
+                                className="object-cover rounded"
                               />
                               <div className="flex-1">
                                 <h4 className="font-medium line-clamp-2 hover:text-primary transition-colors">
@@ -395,9 +428,12 @@ export default function PlayerDetail() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-muted-foreground py-8">
-                        No hay noticias relacionadas
-                      </p>
+                      <EmptyState 
+                        type="news" 
+                        title="No hay noticias relacionadas"
+                        description="Aún no hay noticias sobre este jugador"
+                        compact
+                      />
                     )}
                   </CardContent>
                 </Card>

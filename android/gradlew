@@ -1,0 +1,4 @@
+#!/bin/sh
+# Gradle wrapper placeholder - Android Studio lo generará automáticamente
+echo "Ejecuta este proyecto desde Android Studio"
+echo "File → Open → Selecciona la carpeta 'android'"

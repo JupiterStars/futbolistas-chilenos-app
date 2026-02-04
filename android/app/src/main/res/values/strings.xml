@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">FCH Noticias</string>
+    <string name="asset_statements">
+        [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "web",
+                "site": "https://fchnoticias.vercel.app"
+            }
+        }]
+    </string>
+    <string name="twa_service_provider" translatable="false">com.google.androidbrowserhelper</string>
+</resources>

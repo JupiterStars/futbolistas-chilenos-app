@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Twa" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="colorPrimary">#E30613</item>
+        <item name="colorPrimaryDark">#B8050F</item>
+        <item name="colorAccent">#E30613</item>
+    </style>
+</resources>
